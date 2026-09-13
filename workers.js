@@ -1073,7 +1073,13 @@ const HTML_CONTENT = `
             container.appendChild(btn);
         });
 
-        setupDragScroll(container);
+        if (!isTouchDevice()) {
+            setupDragScroll(container);
+        }
+    }
+
+    function isTouchDevice() {
+        return window.matchMedia('(hover: none)').matches || ('ontouchstart' in window);
     }
 
     // 分类按钮容器超出宽度后支持鼠标拖动横向滚动
