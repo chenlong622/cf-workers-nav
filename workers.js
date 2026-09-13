@@ -5,7 +5,7 @@ const HTML_CONTENT = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Card Tab - 我的导航</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>⭐</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20128%20128%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22grad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20style%3D%22stop-color%3A%2310b981%3Bstop-opacity%3A1%22%20%2F%3E%3Cstop%20offset%3D%22100%25%22%20style%3D%22stop-color%3A%230d9488%3Bstop-opacity%3A1%22%20%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22url%28%23grad%29%22%2F%3E%3Cpath%20d%3D%22M64%2024l12.36%2025.04L104%2054.1l-20%2020.48%204.72%2027.52L64%2088.89%2039.28%20101.1%2044%2073.58%2024%2054.1l27.64-5.06L64%2024z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -249,7 +249,7 @@ const HTML_CONTENT = `
                                             导入配置
                                         </button>
                                         <!-- 文件输入框 (隐藏) -->
-                                        <input type="file" id="import-file-input" accept=".json" class="hidden">
+                                        <input type="file" id="import-file-input" accept=".json,.html,.htm" class="hidden">
                                     </div>
                                     
                                     <div class="h-px bg-slate-100 dark:bg-slate-700/50 mx-1 my-1"></div>
@@ -537,6 +537,11 @@ const HTML_CONTENT = `
         initializeUIComponents();
         renderSearchEngineMenu();
         await checkLoginStatusAndLoad();
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && isLoggedIn) {
+                await validateToken();
+            }
+        });
     });
 
     async function checkLoginStatusAndLoad() {
@@ -661,19 +666,35 @@ const HTML_CONTENT = `
             elements.searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') elements.searchButton.click();
             });
+            // 实时搜索防抖：避免每次输入都触发全量重渲染
+            let searchDebounceTimer = null;
             elements.searchInput.addEventListener('input', (e) => {
-                if(e.target.value) elements.clearSearchButton.classList.remove('hidden');
-                else elements.clearSearchButton.classList.add('hidden');
+                if (e.target.value) {
+                    elements.clearSearchButton.classList.remove('hidden');
+                } else {
+                    elements.clearSearchButton.classList.add('hidden');
+                }
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                    const q = e.target.value.trim();
+                    if (!q) {
+                        // 清空关键词时恢复全量展示（不清输入框）
+                        renderCategorySections({ renderButtons: true });
+                        return;
+                    }
+                    if (currentEngine === 'site') {
+                        elements.clearSearchButton.classList.remove('hidden');
+                        const filtered = getFilteredCategoriesByKeyword(q);
+                        // 实时搜索直接渲染，避免每次无结果都弹 alert，干扰连续输入
+                        renderCategorySections({ renderButtons: true, searchMode: true, filteredCategories: filtered });
+                    }
+                }, 220);
             });
         }
         
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) {
-                elements.backToTopBtn.classList.remove('hidden');
-            } else {
-                elements.backToTopBtn.classList.add('hidden');
-            }
-        });
+            elements.backToTopBtn.classList.toggle('hidden', window.scrollY <= 300);
+        }, { passive: true });
         
         setupScrollSpy();
         
@@ -697,6 +718,13 @@ const HTML_CONTENT = `
     }
     
     async function loadLinks() {
+        if (isLoggedIn) {
+            const isValid = await validateToken();
+            if (!isValid) {
+                logout();
+                return;
+            }
+        }
         const headers = { 'Content-Type': 'application/json' };
         if (isLoggedIn) {
             const token = localStorage.getItem('authToken');
@@ -879,7 +907,8 @@ const HTML_CONTENT = `
 
     function renderCategorySections({ renderButtons = false, searchMode = false, filteredCategories = null } = {}) {
         const container = document.getElementById('sections-container');
-        container.innerHTML = '';
+        setupCardDelegation(container);
+        const fragment = document.createDocumentFragment();
         const sourceCategories = searchMode && filteredCategories ? filteredCategories : categories;
 
         Object.entries(sourceCategories).forEach(([category, { links, isHidden }]) => {
@@ -906,20 +935,20 @@ const HTML_CONTENT = `
                 
                 controls.innerHTML = \`
                     <!-- 编辑名称 -->
-                    <button class="\${btnBase} text-slate-500 hover:text-blue-600 hover:bg-blue-100 dark:text-slate-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 has-tooltip" data-tooltip="重命名" onclick="editCategoryName('\${category}')">
+                    <button class="\${btnBase} text-slate-500 hover:text-blue-600 hover:bg-blue-100 dark:text-slate-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 has-tooltip" data-tooltip="重命名" data-action="edit" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     </button>
                     
                     <div class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-0.5"></div>
 
                     <!-- 排序组 -->
-                    <button class="\${btnBase} text-slate-500 hover:text-emerald-600 hover:bg-emerald-100 dark:text-slate-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 has-tooltip" data-tooltip="上移" onclick="moveCategory('\${category}', -1)">
+                    <button class="\${btnBase} text-slate-500 hover:text-emerald-600 hover:bg-emerald-100 dark:text-slate-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 has-tooltip" data-tooltip="上移" data-action="move" data-dir="-1" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
                     </button>
-                    <button class="\${btnBase} text-slate-500 hover:text-emerald-600 hover:bg-emerald-100 dark:text-slate-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 has-tooltip" data-tooltip="下移" onclick="moveCategory('\${category}', 1)">
+                    <button class="\${btnBase} text-slate-500 hover:text-emerald-600 hover:bg-emerald-100 dark:text-slate-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 has-tooltip" data-tooltip="下移" data-action="move" data-dir="1" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
-                    <button class="\${btnBase} text-slate-500 hover:text-amber-600 hover:bg-amber-100 dark:text-slate-400 dark:hover:bg-amber-900/30 dark:hover:text-amber-400 has-tooltip" data-tooltip="置顶" onclick="pinCategory('\${category}')">
+                    <button class="\${btnBase} text-slate-500 hover:text-amber-600 hover:bg-amber-100 dark:text-slate-400 dark:hover:bg-amber-900/30 dark:hover:text-amber-400 has-tooltip" data-tooltip="置顶" data-action="pin" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3h14M18 13l-6-6l-6 6M12 7v14"></path></svg>
                     </button>
 
@@ -929,8 +958,7 @@ const HTML_CONTENT = `
                     <div class="flex items-center justify-center w-8 h-8 has-tooltip cursor-pointer" data-tooltip="\${isHidden ? '显示分类' : '隐藏分类'}">
                         <label class="relative inline-flex items-center cursor-pointer">
                             <!-- 下面这一行增加了 DOM 属性更新逻辑 -->
-                            <input type="checkbox" \${isHidden ? 'checked' : ''} 
-                                onchange="this.closest('.has-tooltip').setAttribute('data-tooltip', this.checked ? '显示分类' : '隐藏分类'); toggleCategoryHidden('\${category}', this.checked)" 
+                            <input type="checkbox" data-action="toggleHidden" data-category="\${escAttr(category)}" \${isHidden ? 'checked' : ''} 
                                 class="sr-only peer">
                             <div class="w-3.5 h-3.5 rounded-full border-2 border-slate-400 peer-focus:outline-none peer dark:border-slate-500 peer-checked:bg-slate-500 peer-checked:border-slate-500 transition-colors"></div>
                         </label>
@@ -939,7 +967,7 @@ const HTML_CONTENT = `
                     <div class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-0.5"></div>
 
                     <!-- 删除 -->
-                    <button class="\${btnBase} text-slate-400 hover:text-red-600 hover:bg-red-100 dark:text-slate-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 has-tooltip" data-tooltip="删除分类" onclick="deleteCategory('\${category}')">
+                    <button class="\${btnBase} text-slate-400 hover:text-red-600 hover:bg-red-100 dark:text-slate-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 has-tooltip" data-tooltip="删除分类" data-action="delete" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 \`;
@@ -955,13 +983,19 @@ const HTML_CONTENT = `
                 : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
             
             cardContainer.className = \`grid \${gridClasses} card-container relative\`;
-            cardContainer.id = category; // ID for drag logic
+            cardContainer.id = 'grid-' + category; // 与 section.id 区分，避免同页面 id 重复
+
+            // 卡片离屏构建后一次性挂载，减少 reflow
+            const cardsFragment = document.createDocumentFragment();
+            links.forEach(link => {
+                const card = createCard(link);
+                if (card) cardsFragment.appendChild(card);
+            });
+            cardContainer.appendChild(cardsFragment);
 
             section.appendChild(titleContainer);
             section.appendChild(cardContainer);
-            container.appendChild(section);
-
-            links.forEach(link => createCard(link, cardContainer));
+            fragment.appendChild(section);
 
             if (isEditMode) {
                 const addCardPlaceholder = document.createElement('div');
@@ -978,9 +1012,8 @@ const HTML_CONTENT = `
                 
                 addCardPlaceholder.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    const dragging = document.querySelector('.card.dragging');
-                    if(dragging && dragging.parentElement === cardContainer) {
-                        cardContainer.insertBefore(dragging, addCardPlaceholder);
+                    if (draggedCard && draggedCard.parentElement === cardContainer) {
+                        cardContainer.insertBefore(draggedCard, addCardPlaceholder);
                     }
                 });
                 
@@ -992,6 +1025,8 @@ const HTML_CONTENT = `
                 cardContainer.appendChild(addCardPlaceholder);
             }
         });
+
+        container.replaceChildren(fragment);
 
         if (renderButtons) renderCategoryButtons();
         
@@ -1037,6 +1072,97 @@ const HTML_CONTENT = `
             };
             container.appendChild(btn);
         });
+
+        setupDragScroll(container);
+    }
+
+    // 分类按钮容器超出宽度后支持鼠标拖动横向滚动
+    function setupDragScroll(container) {
+        if (!container || container._dragScroll) return;
+        container._dragScroll = true;
+
+        let isDown = false;
+        let moved = false;
+        let captured = false;
+        let startX = 0;
+        let startScroll = 0;
+        let lastX = 0;
+        let lastT = 0;
+        let vx = 0;
+        let inertiaId = null;
+
+        function stopInertia() {
+            if (inertiaId !== null) {
+                cancelAnimationFrame(inertiaId);
+                inertiaId = null;
+            }
+            vx = 0;
+        }
+
+        function inertiaLoop() {
+            container.scrollLeft += vx * 16;
+            vx *= 0.95;
+            if (Math.abs(vx) < 0.08) {
+                stopInertia();
+                return;
+            }
+            inertiaId = requestAnimationFrame(inertiaLoop);
+        }
+
+        container.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            stopInertia();
+            isDown = true;
+            moved = false;
+            captured = false;
+            startX = e.clientX;
+            startScroll = container.scrollLeft;
+            lastX = e.clientX;
+            lastT = performance.now();
+            container.style.userSelect = 'none';
+            container.style.scrollSnapType = 'none';
+            e.preventDefault();
+        });
+
+        container.addEventListener('pointermove', (e) => {
+            if (!isDown) return;
+            const dx = e.clientX - startX;
+            const now = performance.now();
+            if (Math.abs(dx) > 4) {
+                if (!captured) {
+                    captured = true;
+                    try { container.setPointerCapture(e.pointerId); } catch (_) {}
+                }
+                moved = true;
+                container.scrollLeft = startScroll - dx;
+                const dt = (now - lastT) || 16;
+                const inst = -(e.clientX - lastX) / dt;
+                vx = vx * 0.8 + inst * 0.2;
+                lastX = e.clientX;
+                lastT = now;
+            }
+        });
+
+        const endDrag = (e) => {
+            if (!isDown) return;
+            isDown = false;
+            container.style.userSelect = '';
+            container.style.scrollSnapType = '';
+            if (captured) { try { container.releasePointerCapture(e.pointerId); } catch (_) {} }
+            // 拖拽超过阈值时阻止本次点击误触分类按钮
+            if (moved) {
+                container.addEventListener('click', (ce) => {
+                    ce.stopPropagation();
+                    ce.preventDefault();
+                }, { capture: true, once: true });
+                // 惯性滚动
+                if (Math.abs(vx) > 0.25) {
+                    inertiaId = requestAnimationFrame(inertiaLoop);
+                }
+            }
+        };
+        container.addEventListener('pointerup', endDrag);
+        container.addEventListener('pointercancel', endDrag);
     }
 
     function scrollToCategory(catId) {
@@ -1154,8 +1280,15 @@ const HTML_CONTENT = `
 
     const imgApi = '/api/icon?url='; 
 
-    function createCard(link, container) {
-        if (!isEditMode && link.isPrivate && !isLoggedIn) return;
+    // HTML 属性转义：防止用户数据中的引号破坏模板属性（配合 data-* 委托使用）
+    function escAttr(v) {
+        return String(v).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function createCard(link) {
+        if (!isEditMode && link.isPrivate && !isLoggedIn) return null;
 
         const card = document.createElement('div');
         
@@ -1167,7 +1300,7 @@ const HTML_CONTENT = `
             cardBaseClass += ' ring-1 ring-amber-400/40 bg-amber-50/80 dark:bg-amber-900/10 !border-amber-200 dark:!border-amber-700/50';
         }
 
-        card.className = \`group relative h-full w-full rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)] cursor-pointer select-none \${cardBaseClass}\`;
+        card.className = \`group relative h-full w-full rounded-2xl transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)] cursor-pointer select-none \${cardBaseClass}\`;
         
         if (isEditMode) {
             card.setAttribute('draggable', 'true');
@@ -1185,12 +1318,15 @@ const HTML_CONTENT = `
         
         const icon = document.createElement('img');
         icon.setAttribute('loading', 'lazy'); 
+        icon.setAttribute('decoding', 'async'); 
+        icon.setAttribute('width', isAppLayout ? 64 : 36); 
+        icon.setAttribute('height', isAppLayout ? 64 : 36);
         
         // 图标样式
         let iconClass = '';
         if (isAppLayout) {
              // APP 风格：大图标、白底、大圆角、阴影
-             iconClass = 'w-14 h-14 sm:w-16 sm:h-16 rounded-[1.2rem] object-contain bg-white dark:bg-slate-600 p-2 shadow-md hover:shadow-lg transition-transform duration-300 group-hover:scale-105 group-active:scale-95 z-10';
+             iconClass = 'w-14 h-14 sm:w-16 sm:h-16 rounded-[1.2rem] object-contain bg-slate-100 dark:bg-slate-600 p-2 shadow-md hover:shadow-lg transition-transform duration-300 group-hover:scale-105 group-active:scale-95 z-10';
              if (link.isPrivate) {
                  iconClass += ' ring-2 ring-amber-400';
              }
@@ -1239,8 +1375,8 @@ const HTML_CONTENT = `
 
             const menuBtn = document.createElement('button');
             const btnStyle = isAppLayout
-                ? 'w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-emerald-500 hover:text-white'
-                : 'w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100/80 backdrop-blur-sm';
+                ? 'w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-emerald-500 dark:hover:bg-emerald-600 hover:text-white'
+                : 'w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-700/50 backdrop-blur-sm';
             
             menuBtn.className = \`\${btnStyle} flex items-center justify-center transition-all duration-200\`;
             menuBtn.innerHTML = '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>';
@@ -1291,20 +1427,41 @@ const HTML_CONTENT = `
             };
         }
 
-        card.addEventListener('dragstart', dragStart);
-        card.addEventListener('dragover', dragOver);
-        card.addEventListener('dragend', dragEnd);
-        card.addEventListener('drop', drop);
-        
+
         if (!isEditMode && link.tips) {
             card.classList.add('has-tooltip');
             card.setAttribute('data-tooltip', link.tips);
         }
 
-        card.addEventListener('touchstart', touchStart, { passive: false });
-        
-        container.appendChild(card);
-        
+        return card;
+    }
+
+    // 卡片级事件委托：drag/touch 只在容器上绑定一次，监听器数量与卡片数解耦
+    function setupCardDelegation(container) {
+        if (!container || container._cardDelegation) return;
+        container._cardDelegation = true;
+
+        container.addEventListener('dragstart', (e) => {
+            const card = e.target.closest('.card');
+            if (!card) return;
+            dragStart.call(card, e);
+        });
+        container.addEventListener('dragover', (e) => {
+            if (!isEditMode || !e.target.closest('.card-container')) return;
+            dragOver(e);
+        });
+        container.addEventListener('dragend', (e) => {
+            const card = e.target.closest('.card');
+            if (card) card.classList.remove('dragging');
+        });
+        container.addEventListener('drop', drop);
+        container.addEventListener('touchstart', (e) => {
+            const card = e.target.closest('.card');
+            if (!card) return;
+            touchStart(e);
+        }, { passive: false });
+
+        // 全局关闭卡片菜单
         if (!window.hasAddedCardMenuListener) {
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.card-menu-dropdown') && !e.target.closest('button')) {
@@ -1313,6 +1470,30 @@ const HTML_CONTENT = `
             });
             window.hasAddedCardMenuListener = true;
         }
+
+        // 分类标题栏操作按钮：事件委托，避免模板字符串内联 onClick 的注入风险
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const category = btn.dataset.category;
+            if (action === 'move') {
+                moveCategory(category, Number(btn.dataset.dir) || 0);
+            } else if (action === 'edit') {
+                editCategoryName(category);
+            } else if (action === 'pin') {
+                pinCategory(category);
+            } else if (action === 'delete') {
+                deleteCategory(category);
+            }
+        });
+        container.addEventListener('change', (e) => {
+            const input = e.target.closest('[data-action="toggleHidden"]');
+            if (!input) return;
+            const tipBox = input.closest('.has-tooltip');
+            if (tipBox) tipBox.setAttribute('data-tooltip', input.checked ? '显示分类' : '隐藏分类');
+            toggleCategoryHidden(input.dataset.category, input.checked);
+        });
     }
     
     function updateCategorySelect() {
@@ -1452,9 +1633,6 @@ const HTML_CONTENT = `
                 container.insertBefore(draggedCard, target.nextSibling);
             }
         }
-    }
-    function dragEnd() {
-        this.classList.remove('dragging');
     }
     async function drop(e) {
         if (!isEditMode) return;
@@ -2113,6 +2291,102 @@ const HTML_CONTENT = `
         }
     }
     
+    // 解析 Chrome / Edge 导出的 Netscape 书签 HTML
+    function parseBookmarks(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const categories = {};
+
+        // 清洗书签标题:按分隔符(|、英文/中文冒号 : ：、两边带可选空格的 -/–/—)拆分
+        function cleanTitle(title) {
+            const raw = (title || '').trim();
+
+            if (!raw) {
+                return { name: '', tips: '' };
+            }
+
+            // 1. 判断是否以 http:// 或 https:// 开头（整体是 URL）
+            if (/^https?:\\/\\//i.test(raw)) {
+                try {
+                    const urlObj = new URL(raw);
+                    const name = (urlObj.hostname + urlObj.pathname).replace(/\\/$/, '');
+                    return { name: name || raw, tips: raw };
+                } catch (e) {
+                    return { name: raw, tips: raw };
+                }
+            }
+
+            // 2. 正常文本标题拆分
+            const sep = /[|:：]|\\s+[-–—]\\s+/;
+
+            const idx = raw.search(sep);
+            if (idx === -1) {
+                return { name: raw, tips: raw };
+            }
+
+            const name = raw.slice(0, idx).trim();
+            const tips = raw.slice(idx).replace(/^[\\s|:：–—-]+/, '').trim();
+
+            return {
+                name: name || raw,
+                tips: tips || raw
+            };
+        }
+
+        function getLinks(dl) {
+            const links = [];
+            const dts = Array.from(dl.children).filter(e => e && e.tagName === 'DT');
+            for (const dt of dts) {
+                const a = dt.querySelector(':scope > a');
+                if (!a) continue;
+                const url = (a.getAttribute('href') || '').trim();
+                if (!url) continue;
+                if (/^(javascript:|vbscript:|data:|chrome:|edge:|about:|magnet:)/i.test(url)) continue;
+                const clean = cleanTitle(a.textContent);
+                links.push({ name: clean.name, url, tips: clean.tips, icon: '', category: null, isPrivate: false });
+            }
+            return links;
+        }
+
+        // 递归处理一个文件夹:子文件夹生成独立分类,当前文件夹的直接链接归入当前分类
+        function processFolder(dl, catName) {
+            const folderDts = Array.from(dl.children).filter(e => e && e.tagName === 'DT' && e.querySelector(':scope > dl'));
+            for (const dt of folderDts) {
+                const h3 = dt.querySelector(':scope > h3');
+                const childDl = dt.querySelector(':scope > dl');
+                const subName = h3 ? h3.textContent.trim() : '未分类';
+                processFolder(childDl, subName);
+            }
+            const links = getLinks(dl);
+            if (catName && links.length) {
+                if (!categories[catName]) categories[catName] = { isHidden: false, links: [] };
+                links.forEach(l => { l.category = catName; categories[catName].links.push(l); });
+            }
+        }
+
+        const rootDl = doc.querySelector('dl');
+        if (!rootDl) return null;
+
+        const rootDts = Array.from(rootDl.children).filter(e => e && e.tagName === 'DT');
+        for (const dt of rootDts) {
+            const childDl = dt.querySelector(':scope > dl');
+            const h3 = dt.querySelector(':scope > h3');
+            if (childDl && h3) {
+                processFolder(childDl, h3.textContent.trim());
+            } else {
+                const a = dt.querySelector(':scope > a');
+                if (!a) continue;
+                const url = (a.getAttribute('href') || '').trim();
+                if (!url || /^(javascript:|vbscript:|data:|chrome:|edge:|about:|magnet:)/i.test(url)) continue;
+                const clean = cleanTitle(a.textContent);
+                if (!categories['未分类']) categories['未分类'] = { isHidden: false, links: [] };
+                categories['未分类'].links.push({ name: clean.name, url, tips: clean.tips, icon: '', category: '未分类', isPrivate: false });
+            }
+        }
+
+        return Object.keys(categories).length ? { categories } : null;
+    }
+
     async function importData() {
         if(!await validateTokenOrRedirect()) return;
         if(!await customConfirm("确定要导入数据吗？导入将覆盖现有数据！")) return;
@@ -2128,7 +2402,18 @@ const HTML_CONTENT = `
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     try {
-                        const data = JSON.parse(event.target.result);
+                        const content = event.target.result;
+                        const trimmed = content.trimStart();
+                        let data;
+                        if (trimmed.startsWith('<!DOCTYPE') || /<(DL|H3)\b/i.test(trimmed)) {
+                            // Chrome / Edge 书签 HTML
+                            data = parseBookmarks(content);
+                            if (!data) throw new Error("No valid bookmarks found");
+                        } else {
+                            // 本项目导出的 JSON 配置
+                            data = JSON.parse(content);
+                            if (typeof data !== 'object' || data === null) throw new Error("Invalid JSON");
+                        }
                         const res = await fetchWithAuth("/api/importData", {
                             method: "POST",
                             headers: {
@@ -2136,15 +2421,12 @@ const HTML_CONTENT = `
                             },
                             body: JSON.stringify(data)
                         });
-                        
                         if (res.status === 401) {
                             logout();
                             await customAlert('登录凭证已过期，请重新登录');
                             return;
                         }
-                        
                         if (!res.ok) throw new Error("Import failed");
-                        
                         await customAlert('数据导入成功！');
                         location.reload(); 
                     } catch (error) {
@@ -2449,7 +2731,13 @@ export default {
         }
 
         if (url.pathname === '/') {
-            return new Response(HTML_CONTENT, { headers: { 'Content-Type': 'text/html' } });
+            return new Response(HTML_CONTENT, {
+                headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'no-cache, max-age=0, must-revalidate',
+                    'Vary': 'Accept-Encoding'
+                }
+            });
         }
 
         if (url.pathname === '/api/login' && request.method === 'POST') {
