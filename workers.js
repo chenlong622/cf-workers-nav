@@ -128,6 +128,54 @@ const HTML_CONTENT = `
             z-index: 100;
             transition: opacity 0.1s ease-in-out;
         }
+
+        .card-status-tag {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.4;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.28s ease;
+        }
+        .card-status-tag.visible {
+            display: inline-flex;
+            opacity: 1;
+        }
+        .card-status-tag.checking {
+            background: rgba(234, 179, 8, 0.15);
+            color: #b45309;
+        }
+        html.dark .card-status-tag.checking {
+            color: #fbbf24;
+        }
+        .card-status-tag.online {
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+        }
+        html.dark .card-status-tag.online {
+            color: #34d399;
+        }
+        /* 延迟偏慢（300~1000ms）：橙色 */
+        .card-status-tag.slow {
+            background: rgba(249, 115, 22, 0.15);
+            color: #ea580c;
+        }
+        html.dark .card-status-tag.slow {
+            color: #fb923c;
+        }
+        .card-status-tag.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+        html.dark .card-status-tag.offline {
+            color: #f87171;
+        }
     </style>
     <script>
         (function () {
@@ -227,7 +275,18 @@ const HTML_CONTENT = `
                                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         编辑模式
                                     </button>
-                                    
+
+                                    <!-- 一键检测 -->
+                                    <div id="check-all-menu" class="hidden border-t border-slate-100 dark:border-slate-700/50 my-1 pt-1">
+                                        <button id="check-all-btn" onclick="checkAllSites()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700/50 hover:text-emerald-600 transition-colors flex items-center justify-between gap-3 font-medium">
+                                            <span class="flex items-center gap-3">
+                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                一键检测
+                                            </span>
+                                            <span id="check-all-status" class="text-xs font-normal text-slate-400 dark:text-slate-500"></span>
+                                        </button>
+                                    </div>
+
                                     <!-- 导入导出 (仅登录显示) -->
                                     <div id="data-tools-menu" class="hidden border-t border-slate-100 dark:border-slate-700/50 my-1 pt-1">
                                          <button onclick="exportData()" class="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-700/50 hover:text-amber-600 transition-colors flex items-center gap-3">
@@ -449,6 +508,150 @@ const HTML_CONTENT = `
     const categories = {};
     let currentEngine;
     let initialDragState = { category: null, index: -1 };
+
+    let latencyResults = {};
+    let checkAllRunning = false;
+
+    function siteKey(url) {
+        return String(url || '')
+            .replace(/^[a-z]+:\\/\\//i, '')
+            .replace(/\\/+$/, '')
+            .toLowerCase();
+    }
+
+    function findCardsByUrl(rawUrl) {
+        const out = [];
+        document.querySelectorAll('[data-url]').forEach((c) => {
+            if (c.getAttribute('data-url') === rawUrl) out.push(c);
+        });
+        return out;
+    }
+
+    function renderStatus(card, state) {
+        const tag = card.querySelector('.card-status-tag');
+        if (!tag) return;
+        tag.classList.remove('checking', 'online', 'slow', 'offline');
+        if (state === 'checking') {
+            tag.classList.add('checking', 'visible');
+            tag.textContent = '检测中...';
+            tag.title = '';
+        } else if (state && state.online) {
+            const latency = Number(state.latency) || 0;
+            const isLocal = state.source === 'local';
+            if (!isLocal && latency > 1000) {
+                tag.classList.add('offline', 'visible');
+            } else if (latency > 300) {
+                tag.classList.add('slow', 'visible');
+            } else {
+                tag.classList.add('online', 'visible');
+            }
+            tag.textContent = latency + 'ms';
+            tag.title = state.status != null ? ('HTTP ' + state.status + '，耗时 ' + latency + 'ms') : ('在线 ' + latency + 'ms');
+        } else {
+            tag.classList.add('offline', 'visible');
+            tag.textContent = '离线';
+            tag.title = state && state.status != null ? ('HTTP ' + state.status) : '离线或超时';
+        }
+    }
+
+    async function localProbe(url) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+        const start = Date.now();
+        try {
+            await fetch(url, {
+                mode: 'no-cors',
+                redirect: 'follow',
+                cache: 'no-store',
+                signal: controller.signal
+            });
+            return { online: true, latency: Date.now() - start, status: 'local', source: 'local' };
+        } catch (e) {
+            return { online: false, latency: Date.now() - start, status: 'local-error', source: 'local' };
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    async function probeUrl(url) {
+        let backend = null;
+        try {
+            const res = await fetch('/api/check?url=' + encodeURIComponent(url), {
+                headers: { Accept: 'application/json' }
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            backend = {
+                online: !!data.online,
+                latency: Number(data.latency) || 0,
+                status: data.status != null ? data.status : (data.online ? 200 : 'timeout'),
+                source: 'server'
+            };
+        } catch (e) {
+            backend = { online: false, latency: 0, status: 'error', source: 'server' };
+        }
+        if (backend.online) return backend;
+        const local = await localProbe(url);
+        if (local.online) return local;
+
+        return { online: false, latency: 0, status: backend.status || 'offline', source: 'server' };
+    }
+
+    // 一键检测：最大并发 5 的队列，检测全部站点
+    async function checkAllSites() {
+        if (!isLoggedIn) { alert('请先登录后再使用检测功能'); return; }
+        if (checkAllRunning) return;
+        if (!await customConfirm('确定要检测全部站点的存活与延迟吗？')) return;
+        checkAllRunning = true;
+
+        const statusEl = document.getElementById('check-all-status');
+        if (statusEl) statusEl.textContent = '检测中...';
+
+        const links = getAllLinks().filter((l) => l && l.url);
+        const total = links.length;
+
+        if (total === 0) {
+            checkAllRunning = false;
+            if (statusEl) statusEl.textContent = '0 个站点';
+            return;
+        }
+
+        document.querySelectorAll('[data-url]').forEach((c) => renderStatus(c, 'checking'));
+
+        links.forEach((l) => { latencyResults[siteKey(l.url)] = 'checking'; });
+
+        const queue = links.slice();
+        let doneCount = 0;
+
+        function updateProgress() {
+            if (statusEl) statusEl.textContent = doneCount + '/' + total;
+        }
+
+        async function worker() {
+            while (queue.length) {
+                const link = queue.shift();
+                const key = siteKey(link.url);
+                let result = null;
+                if (findCardsByUrl(link.url).length === 0) {
+                    result = await probeUrl(link.url);
+                } else {
+                    result = await probeUrl(link.url);
+                    findCardsByUrl(link.url).forEach((c) => renderStatus(c, result));
+                }
+                latencyResults[key] = result;
+                doneCount++;
+                updateProgress();
+            }
+        }
+
+        const tasks = [];
+        const concurrency = Math.min(5, queue.length);
+        for (let i = 0; i < concurrency; i++) tasks.push(worker());
+        await Promise.all(tasks);
+
+        checkAllRunning = false;
+        if (statusEl) statusEl.textContent = '';
+    }
 
     function toggleAppLayout() {
         isAppLayout = !isAppLayout;
@@ -1243,6 +1446,7 @@ const HTML_CONTENT = `
         const loginBtn = document.getElementById('login-Btn');
         const addCategoryContainer = document.getElementById('add-category-container');
         const dataToolsMenu = document.getElementById('data-tools-menu');
+        const checkAllMenu = document.getElementById('check-all-menu');
         
         loginBtn.innerHTML = isLoggedIn ? 
             '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> 退出登录' : 
@@ -1251,8 +1455,10 @@ const HTML_CONTENT = `
         if(isLoggedIn) {
             loginBtn.classList.replace('text-red-500', 'text-slate-700');
             if(dataToolsMenu) dataToolsMenu.classList.remove('hidden');
+            if(checkAllMenu) checkAllMenu.classList.remove('hidden');
         } else {
             if(dataToolsMenu) dataToolsMenu.classList.add('hidden');
+            if(checkAllMenu) checkAllMenu.classList.add('hidden');
         }
         
         if (isEditMode) {
@@ -1359,6 +1565,13 @@ const HTML_CONTENT = `
         
         header.appendChild(icon);
         header.appendChild(title);
+
+        const statusTag = document.createElement('span');
+        statusTag.className = 'card-status-tag';
+        statusTag.setAttribute('data-for', link.url);
+        statusTag.textContent = '';
+        header.appendChild(statusTag);
+
         card.appendChild(header);
 
         if (!isAppLayout) {
@@ -1373,6 +1586,13 @@ const HTML_CONTENT = `
             badge.className = 'absolute top-0 right-0 w-8 h-8 pointer-events-none overflow-hidden rounded-tr-2xl';
             badge.innerHTML = '<div class="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 rotate-45 w-8 h-8 bg-amber-400"></div>';
             card.appendChild(badge);
+        }
+
+        const prevResult = latencyResults[siteKey(link.url)];
+        if (prevResult === 'checking') {
+            renderStatus(card, 'checking');
+        } else if (prevResult) {
+            renderStatus(card, prevResult);
         }
 
         if (isEditMode) {
@@ -2759,6 +2979,66 @@ async function handleSmartBackup(env, currentData) {
     }
 }
 
+function jsonResp(data, status = 200) {
+    return new Response(JSON.stringify(data), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+}
+
+// 服务端探活：优先 HEAD，遇 405/403/网络错误/超时 均降级为 GET，每次请求独立 4 秒超时
+async function probeBackendUrl(targetUrl) {
+    const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+    };
+
+    async function attempt(method) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+        const startTs = Date.now();
+        try {
+            const res = await fetch(targetUrl, {
+                method,
+                redirect: 'follow',
+                headers,
+                signal: controller.signal
+            });
+
+            const latency = Date.now() - startTs;
+            const status = res.status;
+
+            if (res.body) {
+                res.body.cancel().catch(() => {});
+            }
+
+            return { online: true, latency, status };
+        } catch (e) {
+            const isTimeout = e.name === 'AbortError';
+            return { 
+                online: false, 
+                latency: Date.now() - startTs, 
+                status: isTimeout ? 'timeout' : 'error' 
+            };
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    // 1. 先尝试 HEAD
+    let result = await attempt('HEAD');
+
+    // 2. 如果 HEAD 被拒 (405/403/400)、网络错误或超时，都降级用 GET 重新探活一次
+    if (!result.online || result.status === 405 || result.status === 403 || result.status === 400) {
+        result = await attempt('GET');
+    }
+
+    return result;
+}
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -2769,6 +3049,23 @@ export default {
 
         if (url.pathname === '/api/icon') {
             return handleIconProxy(request, ctx);
+        }
+
+        if (url.pathname === '/api/check' && request.method === 'GET') {
+            const target = url.searchParams.get('url');
+            if (!target) {
+                return jsonResp({ online: false, latency: 0, status: 'missing-url' }, 400);
+            }
+            try {
+                const result = await probeBackendUrl(target);
+                return jsonResp({
+                    online: result.online,
+                    latency: result.latency,
+                    status: result.status
+                });
+            } catch (e) {
+                return jsonResp({ online: false, latency: 0, status: 'error' });
+            }
         }
 
         if (url.pathname === '/') {
