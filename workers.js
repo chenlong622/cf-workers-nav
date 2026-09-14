@@ -556,82 +556,50 @@ const HTML_CONTENT = `
 
     async function localProbe(url) {
         const start = Date.now();
-        const maxRetries = 1; 
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-                const probe = await fetchProbe(url);
-                if (probe) return { ...probe, latency: Date.now() - start };
-            } catch (_) {}
-            try {
-                const imageProbe = await imageProbeFavicon(url);
-                if (imageProbe) return { online: true, latency: Date.now() - start, status: 200, source: 'local' };
-            } catch (_) {}
-            if (attempt < maxRetries) {
-                await new Promise(r => setTimeout(r, 4000));
-            }
-        }
-        return { 
-            online: false, 
-            latency: Date.now() - start, 
-            status: 'error', 
-            source: 'local' 
-        };
-    }
+        const TIMEOUT = 3000;
+        return new Promise((resolve) => {
+            let settled = false;
+            let overallTimer = null;
+            let img = null;
+            const controller = new AbortController();
 
-    // 独立的 Fetch 探活
-    async function fetchProbe(url) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4500);
-        try {
-            await fetch(url, {
+            const finish = (result) => {
+                if (settled) return;
+                settled = true;
+                if (overallTimer) { clearTimeout(overallTimer); overallTimer = null; }
+                try { controller.abort(); } catch (_) {}
+                if (img) {
+                    img.onload = null;
+                    img.onerror = null;
+                    img.src = '';
+                    img = null;
+                }
+                resolve(Object.assign({ latency: Date.now() - start }, result));
+            };
+
+            overallTimer = setTimeout(
+                () => finish({ online: false, status: 'error', source: 'local' }),
+                TIMEOUT + 200
+            );
+
+            fetch(url, {
                 mode: 'no-cors',
                 redirect: 'follow',
                 cache: 'no-store',
                 signal: controller.signal
-            });
-            return { online: true, status: 200, source: 'local' };
-        } catch (e) {
-            return null;
-        } finally {
-            clearTimeout(timer);
-        }
-    }
+            }).then(() => finish({ online: true, status: 200, source: 'local' }))
+              .catch(() => {});
 
-    function imageProbeFavicon(url) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            const timer = setTimeout(() => {
-                cleanup();
-                resolve(false);
-            }, 4500);
-
-            function cleanup() {
-                clearTimeout(timer);
-                img.onload = null;
-                img.onerror = null;
-                img.src = '';
-            }
-            img.onload = () => {
-                cleanup();
-                resolve(true);
-            };
-            img.onerror = () => {
-                cleanup();
-                resolve(true); 
-            };
             try {
+                img = new Image();
+                img.onload = () => finish({ online: true, status: 200, source: 'local' });
+                img.onerror = () => finish({ online: true, status: 200, source: 'local' });
                 const cleanUrl = new URL(url).origin;
-                img.src = \`\${cleanUrl}/favicon.ico?_t=\${Date.now()}\`;
+                img.src = cleanUrl + '/favicon.ico?_t=' + Date.now();
             } catch (e) {
-                cleanup();
-                resolve(false);
+                img = null;
             }
         });
-    }
-
-    // 纯前端探活
-    async function probeUrl(url) {
-        return await localProbe(url);
     }
 
     // 一键检测：最大并发 5 的队列，检测全部站点
@@ -653,37 +621,47 @@ const HTML_CONTENT = `
             return;
         }
 
-        document.querySelectorAll('[data-url]').forEach((c) => renderStatus(c, 'checking'));
+        const allCards = document.querySelectorAll('[data-url]');
+        allCards.forEach((c) => renderStatus(c, 'checking'));
 
         links.forEach((l) => { latencyResults[siteKey(l.url)] = 'checking'; });
 
         const queue = links.slice();
         let doneCount = 0;
 
+        let lastProgressUpdate = 0;
         function updateProgress() {
-            if (statusEl) statusEl.textContent = doneCount + '/' + total;
+            if (!statusEl) return;
+            const now = Date.now();
+            // 限制进度文本每 100ms 最多刷新一次，或者全部完成时强制刷新
+            if (now - lastProgressUpdate > 100 || doneCount === total) {
+                statusEl.textContent = doneCount + '/' + total;
+                lastProgressUpdate = now;
+            }
         }
 
         async function worker() {
-            while (queue.length) {
+            while (queue.length > 0) {
                 const link = queue.shift();
-                const key = siteKey(link.url);
-                let result = null;
-                if (findCardsByUrl(link.url).length === 0) {
-                    result = await probeUrl(link.url);
-                } else {
-                    result = await probeUrl(link.url);
-                    findCardsByUrl(link.url).forEach((c) => renderStatus(c, result));
-                }
-                latencyResults[key] = result;
+                if (!link) continue;             
+                const key = siteKey(link.url);                
+                const cards = findCardsByUrl(link.url);
+                const result = await localProbe(link.url);              
+                latencyResults[key] = result;               
+                if (cards.length > 0) {
+                    cards.forEach((c) => renderStatus(c, result));
+                }                
                 doneCount++;
-                updateProgress();
+                updateProgress(); 
             }
         }
 
         const tasks = [];
         const concurrency = Math.min(5, queue.length);
-        for (let i = 0; i < concurrency; i++) tasks.push(worker());
+        for (let i = 0; i < concurrency; i++) {
+            tasks.push(worker());
+        }
+        
         await Promise.all(tasks);
 
         checkAllRunning = false;
