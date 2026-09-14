@@ -555,9 +555,33 @@ const HTML_CONTENT = `
     }
 
     async function localProbe(url) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4000);
         const start = Date.now();
+        const maxRetries = 1; 
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                const probe = await fetchProbe(url);
+                if (probe) return { ...probe, latency: Date.now() - start };
+            } catch (_) {}
+            try {
+                const imageProbe = await imageProbeFavicon(url);
+                if (imageProbe) return { online: true, latency: Date.now() - start, status: 200, source: 'local' };
+            } catch (_) {}
+            if (attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 4000));
+            }
+        }
+        return { 
+            online: false, 
+            latency: Date.now() - start, 
+            status: 'error', 
+            source: 'local' 
+        };
+    }
+
+    // 独立的 Fetch 探活
+    async function fetchProbe(url) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4500);
         try {
             await fetch(url, {
                 mode: 'no-cors',
@@ -565,36 +589,49 @@ const HTML_CONTENT = `
                 cache: 'no-store',
                 signal: controller.signal
             });
-            return { online: true, latency: Date.now() - start, status: 'local', source: 'local' };
+            return { online: true, status: 200, source: 'local' };
         } catch (e) {
-            return { online: false, latency: Date.now() - start, status: 'local-error', source: 'local' };
+            return null;
         } finally {
             clearTimeout(timer);
         }
     }
 
-    async function probeUrl(url) {
-        let backend = null;
-        try {
-            const res = await fetch('/api/check?url=' + encodeURIComponent(url), {
-                headers: { Accept: 'application/json' }
-            });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            backend = {
-                online: !!data.online,
-                latency: Number(data.latency) || 0,
-                status: data.status != null ? data.status : (data.online ? 200 : 'timeout'),
-                source: 'server'
-            };
-        } catch (e) {
-            backend = { online: false, latency: 0, status: 'error', source: 'server' };
-        }
-        if (backend.online) return backend;
-        const local = await localProbe(url);
-        if (local.online) return local;
+    function imageProbeFavicon(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            const timer = setTimeout(() => {
+                cleanup();
+                resolve(false);
+            }, 4500);
 
-        return { online: false, latency: 0, status: backend.status || 'offline', source: 'server' };
+            function cleanup() {
+                clearTimeout(timer);
+                img.onload = null;
+                img.onerror = null;
+                img.src = '';
+            }
+            img.onload = () => {
+                cleanup();
+                resolve(true);
+            };
+            img.onerror = () => {
+                cleanup();
+                resolve(true); 
+            };
+            try {
+                const cleanUrl = new URL(url).origin;
+                img.src = \`\${cleanUrl}/favicon.ico?_t=\${Date.now()}\`;
+            } catch (e) {
+                cleanup();
+                resolve(false);
+            }
+        });
+    }
+
+    // 纯前端探活
+    async function probeUrl(url) {
+        return await localProbe(url);
     }
 
     // 一键检测：最大并发 5 的队列，检测全部站点
@@ -2324,8 +2361,13 @@ const HTML_CONTENT = `
                  toggleOverlay('password-dialog-overlay', false);
                  await loadLinks();
                  await customAlert('登录成功');
+             } else if (res.status === 429 && data.locked) {
+                 await customAlertRateLimit(data.retryAfter || 900);
              } else {
-                 await customAlert('密码错误');
+                 var remMsg = '密码错误';
+                 var remaining = typeof data.remaining === 'number' ? data.remaining : 0;
+                 if (remaining > 0) remMsg = '密码错误，还可尝试 ' + remaining + ' 次';
+                 await customAlert(remMsg);
              }
          } catch(e) { await customAlert('Login Error'); }
     }
@@ -2414,6 +2456,27 @@ const HTML_CONTENT = `
                  toggleOverlay('custom-alert-overlay', false);
                  resolve();
              }
+        });
+    }
+
+    function customAlertRateLimit(seconds) {
+        return new Promise(resolve => {
+            const content = document.getElementById('custom-alert-content');
+            toggleOverlay('custom-alert-overlay', true);
+            const timer = setInterval(() => {
+                if (seconds > 0) {
+                    content.innerText = '登录已被限制，请' + seconds + '秒后再试';
+                    seconds--;
+                } else {
+                    clearInterval(timer);
+                    content.innerText = '已过限时，可重新尝试登录';
+                }
+            }, 1000);
+            document.getElementById('custom-alert-confirm').onclick = () => {
+                clearInterval(timer);
+                toggleOverlay('custom-alert-overlay', false);
+                resolve();
+            }
         });
     }
 
@@ -2986,59 +3049,6 @@ function jsonResp(data, status = 200) {
     });
 }
 
-// 服务端探活：优先 HEAD，遇 405/403/网络错误/超时 均降级为 GET，每次请求独立 4 秒超时
-async function probeBackendUrl(targetUrl) {
-    const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-    };
-
-    async function attempt(method) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4000);
-        const startTs = Date.now();
-        try {
-            const res = await fetch(targetUrl, {
-                method,
-                redirect: 'follow',
-                headers,
-                signal: controller.signal
-            });
-
-            const latency = Date.now() - startTs;
-            const status = res.status;
-
-            if (res.body) {
-                res.body.cancel().catch(() => {});
-            }
-
-            return { online: true, latency, status };
-        } catch (e) {
-            const isTimeout = e.name === 'AbortError';
-            return { 
-                online: false, 
-                latency: Date.now() - startTs, 
-                status: isTimeout ? 'timeout' : 'error' 
-            };
-        } finally {
-            clearTimeout(timer);
-        }
-    }
-
-    // 1. 先尝试 HEAD
-    let result = await attempt('HEAD');
-
-    // 2. 如果 HEAD 被拒 (405/403/400)、网络错误或超时，都降级用 GET 重新探活一次
-    if (!result.online || result.status === 405 || result.status === 403 || result.status === 400) {
-        result = await attempt('GET');
-    }
-
-    return result;
-}
-
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -3049,23 +3059,6 @@ export default {
 
         if (url.pathname === '/api/icon') {
             return handleIconProxy(request, ctx);
-        }
-
-        if (url.pathname === '/api/check' && request.method === 'GET') {
-            const target = url.searchParams.get('url');
-            if (!target) {
-                return jsonResp({ online: false, latency: 0, status: 'missing-url' }, 400);
-            }
-            try {
-                const result = await probeBackendUrl(target);
-                return jsonResp({
-                    online: result.online,
-                    latency: result.latency,
-                    status: result.status
-                });
-            } catch (e) {
-                return jsonResp({ online: false, latency: 0, status: 'error' });
-            }
         }
 
         if (url.pathname === '/') {
@@ -3079,10 +3072,34 @@ export default {
         }
 
         if (url.pathname === '/api/login' && request.method === 'POST') {
+            const RATE_LIMIT_PREFIX = '__limit__';
+            const MAX_ATTEMPTS = 5;
+            const LOCK_MS = 900 * 1000;
             try {
+                const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+                const rateLimitKey = `${RATE_LIMIT_PREFIX}login_${clientIP}`;
+                const kv = await env.CARD_ORDER.getWithMetadata(rateLimitKey, { type: 'text' });
+                const attempts = parseInt(kv.value) || 0;
+                const expiredAt = (kv.metadata && kv.metadata.expiredAt) || 0;
+
+                if (attempts >= MAX_ATTEMPTS) {
+                    const waitSec = Math.max(1, Math.ceil((expiredAt - Date.now()) / 1000));
+                    return new Response(JSON.stringify({ valid: false, locked: true, remaining: 0, retryAfter: waitSec }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+
                 const { password } = await request.json();
-                if (password !== env.ADMIN_PASSWORD) throw new Error('Password mismatch');
-                
+                if (password !== env.ADMIN_PASSWORD) {
+                    const newAttempts = attempts + 1;
+                    const newExpiredAt = Date.now() + LOCK_MS;
+                    await env.CARD_ORDER.put(rateLimitKey, String(newAttempts), { expirationTtl: 900, metadata: { expiredAt: newExpiredAt } });
+                    const remaining = Math.max(0, MAX_ATTEMPTS - newAttempts);
+                    if (newAttempts >= MAX_ATTEMPTS) {
+                        return new Response(JSON.stringify({ valid: false, locked: true, remaining: 0, retryAfter: Math.max(1, Math.ceil((newExpiredAt - Date.now()) / 1000)) }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    }
+                    return new Response(JSON.stringify({ valid: false, remaining }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                await env.CARD_ORDER.delete(rateLimitKey);
+
                 const currentTime = Math.floor(Date.now() / 1000);
 
                 const accessTokenPayload = { 
