@@ -33,6 +33,13 @@ const HTML_CONTENT = `
         ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.6); }
 
+        .loading-spinner-track { border: 4px solid #e2e8f0; }
+        .dark .loading-spinner-track { border-color: #334155; }
+        .loading-spinner-arc { border: 4px solid transparent; border-top-color: #10b981; }
+        .dark .loading-spinner-arc { border-top-color: #34d399; }
+        .icon-spinner { border: 2px solid #cbd5e1; border-top-color: #10b981; }
+        .dark .icon-spinner { border-color: #475569; border-top-color: #34d399; }
+
         @media (max-width: 640px) {
             ::-webkit-scrollbar { display: none; }
             * { scrollbar-width: none; /* Firefox */ }
@@ -483,11 +490,10 @@ const HTML_CONTENT = `
         </div>
     </div>
 
-    <!-- Loading Mask (z-index 100) -->
-    <div id="loading-mask" class="fixed inset-0 z-[100] bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm hidden flex flex-col items-center justify-center transition-opacity">
+    <div id="loading-mask" class="fixed inset-0 z-30 hidden flex flex-col items-center justify-center transition-opacity">
         <div class="relative w-16 h-16">
-            <div class="absolute inset-0 border-4 border-slate-200 dark:border-slate-700 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-emerald-500 rounded-full border-t-transparent animate-spin"></div>
+            <div class="absolute inset-0 w-full h-full rounded-full loading-spinner-track"></div>
+            <div class="absolute inset-0 w-full h-full rounded-full loading-spinner-arc animate-spin"></div>
         </div>
         <p class="mt-4 text-emerald-600 dark:text-emerald-400 font-medium animate-pulse tracking-wide">加载中...</p>
     </div>
@@ -742,9 +748,12 @@ const HTML_CONTENT = `
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
+        const loadingMask = document.getElementById('loading-mask');
+        if (loadingMask) loadingMask.classList.remove('hidden');
         initializeUIComponents();
         renderSearchEngineMenu();
         await checkLoginStatusAndLoad();
+        if (loadingMask) loadingMask.classList.add('hidden');
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState === 'visible' && isLoggedIn) {
                 await validateToken();
@@ -1496,8 +1505,17 @@ const HTML_CONTENT = `
     }
 
     const imgApi = '/api/icon?url='; 
-    const ICON_FALLBACK_SRC = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y='8' x2='12' y='12'/%3E%3Cline x1='12' y='16' x2='12.01' y='16'/%3E%3C/svg%3E";
     const iconCache = new Map();
+    const iconFailed = new Set();
+
+    function createIconFallback(refEl) {
+        const box = document.createElement('div');
+        box.className = refEl.className
+            .replace('opacity-0', 'opacity-100')
+            .replace('object-contain', '') + ' text-slate-500 dark:text-slate-300';
+        box.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" style="display:block;width:100%;height:100%"><path fill="currentColor" d="M16 .396c-8.839 0-16 7.167-16 16c0 7.073 4.584 13.068 10.937 15.183c.803.151 1.093-.344 1.093-.772c0-.38-.009-1.385-.015-2.719c-4.453.964-5.391-2.151-5.391-2.151c-.729-1.844-1.781-2.339-1.781-2.339c-1.448-.989.115-.968.115-.968c1.604.109 2.448 1.645 2.448 1.645c1.427 2.448 3.744 1.74 4.661 1.328c.14-1.031.557-1.74 1.011-2.135c-3.552-.401-7.287-1.776-7.287-7.907c0-1.751.62-3.177 1.645-4.297c-.177-.401-.719-2.031.141-4.235c0 0 1.339-.427 4.4 1.641a15.4 15.4 0 0 1 4-.541c1.36.009 2.719.187 4 .541c3.043-2.068 4.381-1.641 4.381-1.641c.859 2.204.317 3.833.161 4.235c1.015 1.12 1.635 2.547 1.635 4.297c0 6.145-3.74 7.5-7.296 7.891c.556.479 1.077 1.464 1.077 2.959c0 2.14-.02 3.864-.02 4.385c0 .416.28.916 1.104.755c6.4-2.093 10.979-8.093 10.979-15.156c0-8.833-7.161-16-16-16z"/></svg>';
+        return box;
+    }
 
     // HTML 属性转义：防止用户数据中的引号破坏模板属性（配合 data-* 委托使用）
     function escAttr(v) {
@@ -1535,6 +1553,18 @@ const HTML_CONTENT = `
             ? 'flex flex-col items-center justify-center w-full relative' 
             : 'flex items-center gap-3 mb-2.5 w-full';
         
+        // 图标占位容器：图标加载完成前显示 spinner
+        const iconWrap = document.createElement('div');
+        const iconWrapClass = isAppLayout
+            ? 'relative w-14 h-14 sm:w-16 sm:h-16'
+            : 'relative w-9 h-9';
+        iconWrap.className = iconWrapClass;
+
+        // 加载中的 spinner（居中，位于图标底层）
+        const spinner = document.createElement('span');
+        spinner.className = 'absolute inset-0 flex items-center justify-center pointer-events-none';
+        spinner.innerHTML = '<span class="block icon-spinner rounded-full animate-spin" style="width:60%;height:60%;aspect-ratio:1/1;"></span>';
+
         const icon = document.createElement('img');
         icon.setAttribute('loading', 'lazy'); 
         icon.setAttribute('decoding', 'async'); 
@@ -1542,16 +1572,16 @@ const HTML_CONTENT = `
         icon.setAttribute('height', isAppLayout ? 64 : 36);
         
         // 图标样式
-        let iconClass = '';
+        let iconClass = 'relative w-full h-full opacity-0 transition duration-300';
         if (isAppLayout) {
              // APP 风格：大图标、白底、大圆角、阴影
-             iconClass = 'w-14 h-14 sm:w-16 sm:h-16 rounded-[1.2rem] object-contain bg-slate-100 dark:bg-slate-600 p-2 shadow-md hover:shadow-lg transition-transform duration-300 group-hover:scale-105 group-active:scale-95 z-10';
+             iconClass += ' rounded-[1.2rem] object-contain bg-slate-100 dark:bg-slate-600 p-2 shadow-md hover:shadow-lg group-hover:scale-105 group-active:scale-95 z-10';
              if (link.isPrivate) {
                  iconClass += ' ring-2 ring-amber-400';
              }
         } else {
              // 列表风格：小图标、淡底
-             iconClass = 'w-9 h-9 rounded-lg object-contain bg-slate-100 dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-700 transition-transform group-hover:scale-105 pointer-events-none';
+             iconClass += ' rounded-lg object-contain bg-slate-100 dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-700 transition-transform group-hover:scale-105 pointer-events-none';
         }
         icon.className = iconClass;
 
@@ -1564,11 +1594,26 @@ const HTML_CONTENT = `
             resolvedSrc = imgApi + link.url;
             iconCache.set(link.url, resolvedSrc);
         }
-        icon.src = resolvedSrc;
-        icon.onerror = function() {
-            iconCache.set(link.url, ICON_FALLBACK_SRC);
-            this.src = ICON_FALLBACK_SRC;
-        };
+        let iconNode = icon;
+        if (iconFailed.has(resolvedSrc)) {
+            iconNode = createIconFallback(icon);
+        } else {
+            icon.src = resolvedSrc;
+            icon.onload = function() {
+                // 图标加载完成后淡入并隐藏 spinner
+                this.classList.add('opacity-100');
+                this.classList.remove('opacity-0');
+                spinner.remove();
+            };
+            icon.onerror = function() {
+                iconFailed.add(resolvedSrc);
+                this.onerror = null; // 防止替换后再出错进入死循环
+                this.replaceWith(createIconFallback(this));
+                spinner.remove();
+            };
+        }
+        if (iconNode === icon) iconWrap.appendChild(spinner);
+        iconWrap.appendChild(iconNode);
         
         const title = document.createElement('div');
         const titleAlign = isAppLayout 
@@ -1578,7 +1623,7 @@ const HTML_CONTENT = `
         title.className = \`card-title pointer-events-none \${titleAlign}\`;
         title.textContent = link.name;
         
-        header.appendChild(icon);
+        header.appendChild(iconWrap);
         header.appendChild(title);
 
         const statusTag = document.createElement('span');
