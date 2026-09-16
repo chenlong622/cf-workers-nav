@@ -599,7 +599,7 @@ const HTML_CONTENT = `
             try {
                 img = new Image();
                 img.onload = () => finish({ online: true, status: 200, source: 'local' });
-                img.onerror = () => finish({ online: true, status: 200, source: 'local' });
+                img.onerror = () => {};
                 const cleanUrl = new URL(url).origin;
                 img.src = cleanUrl + '/favicon.ico?_t=' + Date.now();
             } catch (e) {
@@ -1133,7 +1133,8 @@ const HTML_CONTENT = `
 
             const section = document.createElement('div');
             section.className = 'section section-anchor';
-            section.id = category;
+            section.id = sectionId(category);
+            section.dataset.category = category;
 
             // 标题区域
             const titleContainer = document.createElement('div');
@@ -1141,7 +1142,9 @@ const HTML_CONTENT = `
             
             const title = document.createElement('h2');
             title.className = 'text-lg font-bold text-slate-700 dark:text-slate-100 flex items-center gap-2';
-            title.innerHTML = \`<span class="w-1.5 h-5 bg-emerald-500 rounded-full inline-block shadow-sm"></span> \${category}\`;
+            const badge = document.createElement('span');
+            badge.className = 'w-1.5 h-5 bg-emerald-500 rounded-full inline-block shadow-sm';
+            title.append(badge, ' ' + category);
             titleContainer.appendChild(title);
 
             // 编辑模式下的标题栏操作
@@ -1200,7 +1203,7 @@ const HTML_CONTENT = `
                 : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
             
             cardContainer.className = \`grid \${gridClasses} card-container relative\`;
-            cardContainer.id = 'grid-' + category; // 与 section.id 区分，避免同页面 id 重复
+            cardContainer.id = gridId(category); // 与 section.id 区分，避免同页面 id 重复
 
             // 卡片离屏构建后一次性挂载，减少 reflow
             const cardsFragment = document.createDocumentFragment();
@@ -1389,7 +1392,7 @@ const HTML_CONTENT = `
     }
 
     function scrollToCategory(catId) {
-        const section = document.getElementById(catId);
+        const section = document.getElementById(sectionId(catId));
         if(section) {
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -1422,7 +1425,7 @@ const HTML_CONTENT = `
     function highlightButton(id) {
         const buttons = document.querySelectorAll('.category-button');
         buttons.forEach(btn => {
-            if (btn.dataset.target === id) {
+            if (sectionId(btn.dataset.target) === id) {
                 btn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300', 'hover:bg-emerald-50', 'hover:text-emerald-600', 'dark:hover:bg-slate-700');
                 btn.classList.add('bg-emerald-500', 'text-white', 'shadow-md', 'dark:bg-emerald-600');
                 btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -1512,8 +1515,8 @@ const HTML_CONTENT = `
         const box = document.createElement('div');
         box.className = refEl.className
             .replace('opacity-0', 'opacity-100')
-            .replace('object-contain', '') + ' text-slate-500 dark:text-slate-300';
-        box.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" style="display:block;width:100%;height:100%"><path fill="currentColor" d="M16 .396c-8.839 0-16 7.167-16 16c0 7.073 4.584 13.068 10.937 15.183c.803.151 1.093-.344 1.093-.772c0-.38-.009-1.385-.015-2.719c-4.453.964-5.391-2.151-5.391-2.151c-.729-1.844-1.781-2.339-1.781-2.339c-1.448-.989.115-.968.115-.968c1.604.109 2.448 1.645 2.448 1.645c1.427 2.448 3.744 1.74 4.661 1.328c.14-1.031.557-1.74 1.011-2.135c-3.552-.401-7.287-1.776-7.287-7.907c0-1.751.62-3.177 1.645-4.297c-.177-.401-.719-2.031.141-4.235c0 0 1.339-.427 4.4 1.641a15.4 15.4 0 0 1 4-.541c1.36.009 2.719.187 4 .541c3.043-2.068 4.381-1.641 4.381-1.641c.859 2.204.317 3.833.161 4.235c1.015 1.12 1.635 2.547 1.635 4.297c0 6.145-3.74 7.5-7.296 7.891c.556.479 1.077 1.464 1.077 2.959c0 2.14-.02 3.864-.02 4.385c0 .416.28.916 1.104.755c6.4-2.093 10.979-8.093 10.979-15.156c0-8.833-7.161-16-16-16z"/></svg>';
+            .replace('object-contain', '') + ' text-black dark:text-slate-300';
+        box.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" style="display:block;width:100%;height:100%"><path fill="currentColor" d="M62 32C62 15.432 48.568 2 32 2C15.861 2 2.703 14.746 2.031 30.72c-.008.196-.01.395-.014.592c-.005.23-.017.458-.017.688v.101C2 48.614 15.432 62 32 62s30-13.386 30-29.899l-.002-.049zM37.99 59.351c-.525-.285-1.029-.752-1.234-1.388c-.371-1.152-.084-2.046.342-3.086c.34-.833-.117-1.795.109-2.667c.441-1.697.973-3.536.809-5.359c-.102-1.119-.35-1.17-1.178-1.816c-.873-.685-.873-1.654-1.457-2.52c-.529-.787.895-3.777.498-3.959c-.445-.205-1.457.063-1.777-.362c-.344-.458-.584-.999-1.057-1.354c-.305-.229-1.654-.995-2.014-.941c-1.813.271-3.777-1.497-4.934-2.65c-.797-.791-1.129-1.678-1.713-2.593c-.494-.775-1.242-.842-1.609-1.803c-.385-1.004-.156-2.29-.273-3.346c-.127-1.135-.691-1.497-1.396-2.365c-1.508-1.863-2.063-4.643-4.924-4.643c-1.537 0-1.428 3.348-2.666 2.899c-1.4-.507-3.566 1.891-3.535 1.568c.164-1.674 1.883-2.488 2.051-2.987c.549-1.638-2.453-1.246-2.068-2.612c.188-.672 2.098-1.161 1.703-1.562c-.119-.122-1.58-1.147-1.508-1.198c.271-.19 1.449.412 1.193-.37c-.086-.26-.225-.499-.357-.74a28 28 0 0 1 1.92-1.975c1.014-.083 2.066-.02 2.447.054c2.416.476 3.256 1.699 5.672.794c1.162-.434 5.445.319 6.059 1.537c.334.666 1.578-.403 2.063-.475c.52-.078 1.695.723 2.053.232c.943-1.291-.604-1.827 1.223-.833c1.225.667 3.619-2.266 2.861 1.181c-.547 2.485-2.557 2.54-4.031 4.159c-1.451 1.594 2.871 2.028 2.982 3.468c.32 4.146 2.531-.338 1.939-1.812c-1.145-2.855 1.303-2.071 2.289-.257c.547 1.007.963.159 1.633-.192c.543-.283.688 1.25.805 1.517c.385.887 1.65 1.152 1.436 2.294c-.238 1.259-1.133.881-2.008 1.094c-.977.237.158 1.059.016 1.359c-.154.328-1.332.464-1.646.65c-.924.544-.359 1.605-1.082 2.175c-.496.392-.996.137-1.092.871c-.113.865-1.707 1.143-1.5 1.97c.057.227.516 1.923.227 2.013c-.133.043-1.184-1.475-1.471-1.627c-.568-.301-3.15-.055-3.482 1.654c-.215 1.105 1.563 2.85 2.016 1.328c.561-1.873.828 1.091.693 1.207c.268.234 1.836-.385 1.371.7c-.197.459.193 1.656.889 1.287c.291-.154 1.041.31 1.172.061a2.14 2.14 0 0 1 .742-.692c.701-.41 1.75-.025 2.518.02c.469.027 4.313 2.124 4.334 2.545c.084 1.575 2.99 1.37 3.436 1.933c1.199 1.526.83.751-.045 2.706c-.441.984-.057 2.191-1.125 2.904c-.514.342-1.141.171-1.598.655c-.412.437-.25.959-.5 1.464c-.301.601-4.346 4.236-4.613 5.115c-.133.441-1.34.825-.322 1.248c.592.174-1.311 1.973-.396 2.718c.223.181.369.334.479.471c-.457.122-.91.233-1.369.333M35.594 4.237c-.039.145.02.316.271.483c.566.375-.162 1.208-.943.671c-.779-.537-2.531.241-2.41.644c.119.403.66.563 1.496.242c.834-.322 1.178.048 1.318.43c.096.259 0 .403-.027.752c-.025.349-.996.107-1.803.162c-.809.054-1.67-.162-1.645-.619c.027-.456-.861-1.289-1.391-1.637c-.529-.348.232-1.1.934-.537c.699.564.727-.107 1.535-.321c.459-.122.275-.305.119-.479q1.29.047 2.546.209m3.517 8.869c.605.164 1.656.929 1.656 1.291c0 .363-.477.817-.688.765c-1.523-.371-2.807-1.874-3.514-2.697c-1.234-1.435-1.156-.205-3.111-.826c-.5-.16-1.293-1.711-.768-2.476s1.131-.886 1.615-.683c.484.2 1.898-.645 2.223.362c.322 1.007 1.211 2.292 2.02 2.636c.81.342-.04 1.464.567 1.628m.485 4.673c.242.483-1.455-.564-1.859-1.047c-.402-.482-1.01-1.571-.523-2.054c.484-.482 1.57 1.005 2.141 1.33c1.129.645-.001 1.289.241 1.771m-8.594-7.315c.117-.161.365.242.586.645s-.084.971-.586.885c-.502-.084-.281-1.136 0-1.53m0-4.052s.473 1.154 0 .966s-.496-.671 0-.966m.096 3.65c-.135-.321-.166-1.64.162-2.04c.484-.59 1.266.564.74 1.02c-.525.457-.768 1.343-.902 1.02m-6.077 1.415c-.879-.063-.898-.823-1.02-1.226s-.85.765-1.586 0s.172-1.771.01-2.376c-.162-.604 1.736 0 2.02 0s1.051 1.248 1.252 1.227c.203-.02 1.293.987 1.293.584c0-.402.166-1.088.93-1.168c1.172-.121.121 1.289.08 1.838c-.039.549.891 1.504 1.232 1.907c.344.403-.867.686-1.07.443c-.201-.242-.727 0-1.172.322c-.443.322-1.656-.443-2.221-.685c-.566-.241 1.131-.804.252-.866m3.141-6.354c.781.269 1.225.51 1.609 0c.371-.492.654 1.073.385 1.502c-.27.431-.781.324-.863 0c-.08-.32-1.912-1.771-1.131-1.502m1.131 4.859c-.268-.35-.295-.752 0-1.047c.297-.295.201-.644.729-.751c.26-.054.295.348.295.724s.324.859 0 1.448c-.323.589-.754-.026-1.024-.374m2.205-5.969c-.012.074-.061.118-.184.106a.6.6 0 0 1-.236-.095q.21-.008.42-.011M25.389 5.15c.619 0 .539.418 1.051.719c.512.3.242-1.552.592-.854c.35.697 1.389 1.664.889 1.851c-.43.163-2.234.859-2.396.739s-.377-.63-.809-.739c-.432-.107-.889-1.127-1.186-1.1c-.113.01-.123-.184-.049-.442a28 28 0 0 1 1.572-.455c.058.158.146.281.336.281m13.519 30.025c-.645.666-1.756-.464-2.523-.424s-1.152-.765-1.818-.684c-.668.079.182-.847 1.111-.362c.927.483 3.756.925 3.23 1.47m12.93-22.934c-.188.24-.402.408-.607.585c-.605.524-1.736.484-1.898.846s-.566 1.489-1.98 1.494s-1.01 2.131-1.131 2.738s-.443 1.325-.848.801s-.566-.323-1.816-1.853s-.77-2.375-.365-2.818c.404-.442.566-1.49 0-1.329s-.889-.202-.768-.703s.727-.867 0-1.402s-.324-2.445-.889-4.189c-.566-1.745-1.334-.51-2.586-.443s-1.455-.873-.889-1.303a27.95 27.95 0 0 1 13.777 7.576"/></svg>';
         return box;
     }
 
@@ -1522,6 +1525,24 @@ const HTML_CONTENT = `
         return String(v).replace(/[&<>"']/g, c => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[c]));
+    }
+
+    // 把用户分类名转成合法且稳定的 DOM id，避免把任意用户数据拼进 id
+    function slugId(v) {
+        const s = String(v).trim().replace(/[^A-Za-z0-9\u4e00-\u9fa5_-]+/g, '-').replace(/^-+|-+$/g, '');
+        return (s || 'cat') + '-' + Math.abs([...String(v)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0));
+    }
+    // 供 scrollToCategory / renderCategoryGrid 复用，与渲染时的 slugId 保持一致
+    function gridId(category) { return 'grid-' + slugId(category); }
+    function sectionId(category) { return 'sec-' + slugId(category); }
+
+    // 只放行 http/https，其余返回 null（拦截 javascript:/data: 等）
+    function safeUrl(raw) {
+        try {
+            const u = new URL(String(raw), location.href);
+            if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+            return u.toString();
+        } catch (e) { return null; }
     }
 
     function createCard(link) {
@@ -1591,7 +1612,7 @@ const HTML_CONTENT = `
         } else if (iconCache.has(link.url)) {
             resolvedSrc = iconCache.get(link.url);
         } else {
-            resolvedSrc = imgApi + link.url;
+            resolvedSrc = imgApi + encodeURIComponent(link.url);
             iconCache.set(link.url, resolvedSrc);
         }
         let iconNode = icon;
@@ -1710,8 +1731,8 @@ const HTML_CONTENT = `
 
         if (!isEditMode) {
             card.onclick = () => {
-                 let url = link.url.startsWith('http') ? link.url : 'http://' + link.url;
-                 window.open(url, '_blank');
+                 const target = safeUrl(link.url);
+                 if (target) window.open(target, '_blank', 'noopener,noreferrer');
             };
         }
 
@@ -1802,7 +1823,7 @@ const HTML_CONTENT = `
 
     // 增量更新：仅重建单个分类的卡片网格
     function renderCategoryGrid(category) {
-        const grid = document.getElementById('grid-' + category);
+        const grid = document.getElementById(gridId(category));
         const cat = categories[category];
         if (!grid || !cat) return;
 
@@ -1872,6 +1893,14 @@ const HTML_CONTENT = `
 
         let found = false;
         let oldCategory = null;
+
+        // 兜底：若表单分类为空（存量 link.category 缺失时可能出现），回退到 oldLink 原分类，
+        // 避免写入 categories[undefined]
+        if (!updatedLink.category) {
+            for (const c in categories) {
+                if (categories[c].links.some(l => l.url === oldLink.url)) { updatedLink.category = c; break; }
+            }
+        }
         
         for (const cat in categories) {
              const idx = categories[cat].links.findIndex(l => l.url === oldLink.url);
@@ -1929,7 +1958,9 @@ const HTML_CONTENT = `
         if(!card) return { category: null, index: -1 };
         const section = card.closest('.section');
         const index = Array.from(section.querySelectorAll('.card')).indexOf(card);
-        return { category: section.id, index: index };
+        // 优先取 data-category（原始分类名），兼容回退到 section.id（脱敏 slug）
+        const category = section.dataset.category || section.id;
+        return { category: category, index: index };
     }
 
     // --- 拖拽（电脑端） ---
@@ -1945,7 +1976,7 @@ const HTML_CONTENT = `
         if (!isEditMode) return;
         e.preventDefault();
         const target = e.target.closest('.card');
-        if (target && target !== draggedCard) {
+        if (draggedCard && target && target !== draggedCard) {
             const container = target.parentElement;
             const rect = target.getBoundingClientRect();
             if (e.clientX < rect.left + rect.width / 2) {
@@ -2252,7 +2283,8 @@ const HTML_CONTENT = `
         const newCategories = {};
         const sections = document.querySelectorAll('.section');
         sections.forEach(sec => {
-            const catName = sec.id;
+            // 用 data-category（原始名）做分类键，与 categories 对象键一致；回退到 section.id
+            const catName = sec.dataset.category || sec.id;
             const oldCat = categories[catName];
             newCategories[catName] = { isHidden: oldCat ? oldCat.isHidden : false, links: [] };
             
@@ -2317,6 +2349,7 @@ const HTML_CONTENT = `
     
     async function toggleLogin() {
         if (!isLoggedIn) {
+             document.getElementById('password-input').value = '';
              toggleOverlay('password-dialog-overlay', true);
              document.getElementById('password-input').focus();
         } else {
@@ -2353,8 +2386,12 @@ const HTML_CONTENT = `
         document.getElementById('icon-input').value = link.icon || '';
         document.getElementById('private-checkbox').checked = link.isPrivate;
         
-        document.getElementById('category-select-value').value = link.category;
-        document.getElementById('category-select-text').textContent = link.category;
+        const linkCategory = link.category || (() => {
+            for (const c in categories) if (categories[c].links.some(l => l.url === link.url)) return c;
+            return '';
+        })();
+        document.getElementById('category-select-value').value = linkCategory;
+        document.getElementById('category-select-text').textContent = linkCategory || '请选择分类';
         
         const btn = document.getElementById('dialog-confirm-btn');
         const newBtn = btn.cloneNode(true);
@@ -2381,6 +2418,7 @@ const HTML_CONTENT = `
              if(data.valid) {
                  localStorage.setItem('authToken', data.token);
                  isLoggedIn = true;
+                 document.getElementById('password-input').value = '';
                  toggleOverlay('password-dialog-overlay', false);
                  await loadLinks();
                  await customAlert('登录成功');
@@ -2395,25 +2433,35 @@ const HTML_CONTENT = `
          } catch(e) { await customAlert('Login Error'); }
     }
 
+    // 单飞刷新锁 —— 并发 401 只触发一次 /api/refreshToken
+    let _refreshing = null;
+    async function refreshOnce() {
+        if (_refreshing) return _refreshing;
+        _refreshing = (async () => {
+            const r = await fetch('/api/refreshToken', { method: 'POST', credentials: 'include' });
+            if (!r.ok) return null;
+            const data = await r.json();
+            return data && data.accessToken ? data.accessToken : null;
+        })();
+        try { return await _refreshing; }
+        finally { _refreshing = null; }
+    }
+
     async function fetchWithAuth(url, options = {}) {
         const token = localStorage.getItem('authToken');
-        const headers = options.headers || {};
-        headers.Authorization = token;
+        const headers = { ...(options.headers || {}) };
+        // 无 token 时不拼 Authorization: null
+        if (token) headers.Authorization = token;
         options.headers = headers;
 
         let res = await fetch(url, options);
 
-        if (res.status === 401) {
+        if (res.status === 401 && token) {
             try {
-                const refreshRes = await fetch('/api/refreshToken', {
-                    method: 'POST',
-                    credentials: 'include' 
-                });
-
-                if (refreshRes.ok) {
-                    const refreshData = await refreshRes.json();
-                    localStorage.setItem('authToken', refreshData.accessToken);
-                    headers.Authorization = refreshData.accessToken;
+                const fresh = await refreshOnce();
+                if (fresh) {
+                    localStorage.setItem('authToken', fresh);
+                    headers.Authorization = fresh;
                     options.headers = headers;
                     res = await fetch(url, options);
                 } else {
@@ -2422,7 +2470,9 @@ const HTML_CONTENT = `
             } catch (refreshError) {
                 localStorage.removeItem('authToken');
                 isLoggedIn = false;
-                toggleOverlay('password-dialog-overlay', true);
+                updateUIState();
+                renderCategories();
+                document.getElementById('password-input').value = '';
                 await customAlert('登录已过期，请重新登录');
                 throw new Error('Unauthorized');
             }
@@ -2602,10 +2652,14 @@ const HTML_CONTENT = `
     }
     
     function logout() {
-        localStorage.removeItem('authToken');
-        isLoggedIn = false;
-        isEditMode = false;
-        location.reload();
+        // 登出同时通知服务端吊销世代并清除 HttpOnly refresh cookie
+        const t = localStorage.getItem('authToken');
+        const clean = () => { localStorage.removeItem('authToken'); isLoggedIn = false; isEditMode = false; location.reload(); };
+        fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: t ? { 'Authorization': t } : {}
+        }).finally(clean);
     }
     
     async function exportData() {
@@ -2795,9 +2849,16 @@ const HTML_CONTENT = `
 </html>
 `;
 
-const DEFAULT_USER = 'testUser';
-const DEFAULT_IMGAPI = 'https://api.xinac.net/icon/?url=';
-let USE_DEFAULT_IMGAPI = true;
+// 配置默认值
+let DEFAULT_USER = 'testUser';
+let ICON_API = 'https://api.xinac.net/icon/?url=';
+let PREFER_ICON_API = true;
+
+function resolveConfig(env) {
+    if (env.DEFAULT_USER) DEFAULT_USER = env.DEFAULT_USER;
+    if (env.ICON_API) ICON_API = env.ICON_API;
+    if (env.PREFER_ICON_API !== undefined) PREFER_ICON_API = env.PREFER_ICON_API === 'true';
+}
 
 function base64UrlEncode(str) {
     return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -2847,13 +2908,34 @@ async function validateJWT(token, secret) {
         const expectedSigBuffer = await crypto.subtle.sign('HMAC', key, data);
         const expectedSig = base64UrlEncodeUint8(new Uint8Array(expectedSigBuffer));
 
-        if (signature !== expectedSig) return null;
+        if (!(await timingSafeStringEqual(signature, expectedSig))) return null;
 
         const payloadStr = base64UrlDecode(payloadEncoded);
         return JSON.parse(payloadStr);
     } catch (e) {
         return null;
     }
+}
+
+let _tseKey = null;
+async function timingSafeStringEqual(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    if (!_tseKey) {
+        _tseKey = await crypto.subtle.importKey(
+            'raw', new TextEncoder().encode('cfile-tse-fixed-key-v1'),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+    }
+    const [ha, hb] = await Promise.all([
+        crypto.subtle.sign('HMAC', _tseKey, new TextEncoder().encode(a)),
+        crypto.subtle.sign('HMAC', _tseKey, new TextEncoder().encode(b)),
+    ]);
+    const ua = new Uint8Array(ha);
+    const ub = new Uint8Array(hb);
+    if (ua.length !== ub.length) return false;
+    let diff = 0;
+    for (let i = 0; i < ua.length; i++) diff |= ua[i] ^ ub[i];
+    return diff === 0;
 }
 
 function parseCookie(cookieHeader) {
@@ -2886,7 +2968,91 @@ async function validateServerToken(authHeader, env) {
         return { isValid: false, status: 403, response: { error: 'Forbidden', message: '令牌类型错误' } };
     }
 
+    const gen = await currentKeyGen(env);
+
+    if (!payload.kid || payload.kid !== gen) {
+        return { isValid: false, status: 401, response: { error: 'Revoked', message: '会话已失效，请重新登录' } };
+    }
+
     return { isValid: true, payload };
+}
+
+let _genCache = { value: null, expireAt: 0 };
+async function currentKeyGen(env) {
+    const now = Date.now();
+    if (_genCache.value !== null && _genCache.expireAt > now) return _genCache.value;
+    let v = null;
+    try { v = await env.CARD_ORDER.get('__keygen__', 'text'); } catch (e) { console.warn('keygen read failed', e); }
+    _genCache = { value: (v || '1'), expireAt: now + 60_000 };
+    return _genCache.value;
+}
+async function bumpKeyGen(env) {
+    try {
+        const gen = String(Number((await currentKeyGen(env)) || '1') + 1);
+        _genCache = { value: gen, expireAt: Date.now() + 60_000 };
+        await env.CARD_ORDER.put('__keygen__', gen);
+        return gen;
+    } catch (e) {
+        console.warn('keygen bump failed', e);
+        return null;
+    }
+}
+
+const CACHE = caches.default;
+let _revCache = { value: null, expireAt: 0 };
+
+async function getDataRev(env) {
+    const now = Date.now();
+    if (_revCache.value !== null && _revCache.expireAt > now) return _revCache.value;
+    let rev = '0';
+    try {
+        rev = (await env.CARD_ORDER.get('__rev__', 'text')) || '0';
+    } catch (e) { console.warn('rev read failed:', e); }
+    _revCache = { value: rev, expireAt: now + 60_000 };
+    return rev;
+}
+
+async function bumpRev(env) {
+    const rev = String(Date.now());
+    _revCache = { value: rev, expireAt: Date.now() + 60_000 };
+    try { await env.CARD_ORDER.put('__rev__', rev); return rev; }
+    catch (e) { console.warn('rev bump failed', e); return rev; }
+}
+
+function cacheKeyFor(url, rev, scope) {
+    const k = new URL(url);
+    k.searchParams.set('__v', rev);        // 版本失效维度
+    k.searchParams.set('__s', scope);      // 鉴权维度
+    return new Request(k.toString(), { method: 'GET' });
+}
+
+function ctxSafePut(key, res) {
+    try { caches.default.put(key, res).catch(e => console.warn('cache put failed', e)); }
+    catch (e) { console.warn('cache put failed', e); }
+}
+
+async function sendCached(body, request, cacheKey, cacheable, extraHeaders = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+        // 响应头一律 no-store：避免 CDN/浏览器按裸 URL 缓存公开数据，否则登录后带
+        // Authorization 请求同一 URL 会命中这份匿名缓存，拿到过滤后数据、污染登录态的
+        'Cache-Control': 'no-store',
+        'Vary': 'Accept-Encoding',
+    };
+    const res = new Response(body, { status: 200, headers });
+    if (cacheable) ctxSafePut(cacheKey, res.clone());
+    return res;
+}
+
+let _htmlMeta = null;
+async function htmlMeta() {
+    if (_htmlMeta) return _htmlMeta;
+    const buf = await new Response(HTML_CONTENT).arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    const etag = '"' + base64UrlEncodeUint8(new Uint8Array(digest)).slice(0, 32) + '"';
+    _htmlMeta = { etag, body: HTML_CONTENT };
+    return _htmlMeta;
 }
 
 function normalizeCategories(categories) {
@@ -2898,74 +3064,165 @@ function normalizeCategories(categories) {
     return categories;
 }
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*', 
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-    'Access-Control-Allow-Credentials': 'true' 
-};
+async function readLinksKv(env) {
+    let dataStr = null;
+    try {
+        dataStr = await env.CARD_ORDER.get(DEFAULT_USER);
+    } catch (e) {
+        console.error('KV read failed:', e);
+    }
+    const { data } = safeJsonParse(dataStr, EMPTY_DATA);
+    if (data) data.categories = normalizeCategories(data.categories || {});
+    return data;
+}
 
+function filterPublic(categories) {
+    const out = {};
+    for (const name in categories) {
+        const cat = categories[name];
+        if (cat && cat.isHidden) continue;
+        const publicLinks = (cat && Array.isArray(cat.links) ? cat.links : []).filter(l => !l.isPrivate);
+        if (publicLinks.length > 0) out[name] = { ...(cat || {}), links: publicLinks };
+    }
+    return out;
+}
+
+function corsHeaders(request, env) {
+    const list = env && env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',').filter(Boolean) : [];
+    const origin = request ? request.headers.get('Origin') : null;
+    if (!origin || !list.includes(origin)) return {};
+    return {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Credentials': 'true',
+        'Vary': 'Origin',
+    };
+}
+
+const FETCH_ICON_MAX_HTML = 1 * 1024 * 1024; 
 async function fetchBestIcon(targetUrl) {
     const headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     };
 
+    let u;
+    try { u = new URL(targetUrl); } catch { console.warn('icon local: bad url'); return null; }
+    if (!ICON_SCHEME_OK.has(u.protocol) || HOST_DENY.test(u.hostname)) {
+        console.warn('icon local: blocked', u.hostname);
+        return null;
+    }
+
+    const scoreCandidate = (c) =>
+        (c.apple ? 2 : 0) +
+        (c.size >= 180 ? 3 : c.size >= 96 ? 2 : c.size > 0 ? 1 : 0) +
+        (/^image\/(png|jpeg|svg\+xml)$/.test(c.type) ? 1 : 0);
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); 
-        
         const response = await fetch(targetUrl, {
             headers: headers,
             redirect: 'follow',
-            signal: controller.signal
+            signal: ctrl.signal
         });
-        clearTimeout(timeoutId);
+        if (!response.ok) return null;
 
-        if (!response.ok) throw new Error('Site unreachable');
-
-        let iconUrl = null;
-        
+        const candidates = [];
+        const seen = new Set();
+        let headDone = false;
         const rewriter = new HTMLRewriter()
-            .on('link[rel="apple-touch-icon"]', { 
+            .on('link', {
                 element(e) {
-                    if (!iconUrl) {
-                        const href = e.getAttribute('href');
-                        if (href) iconUrl = href;
+                    const words = (e.getAttribute('rel') || '').toLowerCase().split(/\s+/);
+                    const apple = words.includes('apple-touch-icon');
+                    if (!apple && !words.includes('icon')) return;
+                    const h = e.getAttribute('href');
+                    if (!h) return;
+                    let abs;
+                    try { abs = new URL(h, targetUrl).toString(); } catch { return; }
+                    if (seen.has(abs)) return;
+                    seen.add(abs);
+                    let size = 0;
+                    for (const m of (e.getAttribute('sizes') || '').matchAll(/(\d+)x(\d+)/g)) {
+                        size = Math.max(size, Number(m[1]), Number(m[2]));
                     }
-                }
+                    candidates.push({ url: abs, apple, size, type: (e.getAttribute('type') || '').toLowerCase() });
+                },
             })
-            .on('link[rel~="icon"]', {
-                element(e) {
-                    if (!iconUrl) {
-                        const href = e.getAttribute('href');
-                        if (href) iconUrl = href;
-                    }
-                }
+            .on('head', {
+                endTag() { headDone = true; },
             });
 
-        await rewriter.transform(response).text();
-
-        let finalUrl;
-        if (iconUrl) {
-            finalUrl = new URL(iconUrl, targetUrl).toString();
-        } else {
-            finalUrl = new URL('/favicon.ico', targetUrl).toString();
+        const reader = rewriter.transform(response).body.getReader();
+        let total = 0;
+        try {
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                total += value ? value.byteLength : 0;
+                if (headDone || total > FETCH_ICON_MAX_HTML) break;
+            }
+        } catch {
+        } finally {
+            try { await reader.cancel(); } catch { }
+            clearTimeout(timer);
         }
 
-        const iconResponse = await fetch(finalUrl, { 
-            headers: headers 
-        });
-
-        if (iconResponse.ok && iconResponse.headers.get('content-type')?.includes('image')) {
-            return iconResponse;
+        candidates.sort((a, b) => scoreCandidate(b) - scoreCandidate(a));
+        const urls = [];
+        const pushUrl = (x) => { if (!urls.includes(x)) urls.push(x); };
+        candidates.slice(0, 3).forEach((c) => pushUrl(c.url));
+        pushUrl(new URL('/favicon.ico', targetUrl).toString());
+        pushUrl(new URL('/favicon.svg', targetUrl).toString());
+        const deadline = Date.now() + 4000;
+        for (const iconUrl of urls) {
+            const ms = Math.min(1500, deadline - Date.now());
+            if (ms <= 0) break;
+            const res = await safeFetchIcon(iconUrl, ms, true);
+            if (res) return res;
         }
-        
-        throw new Error('Icon fetch failed');
-
+        return null;
     } catch (e) {
+        // console.warn('icon local failed', e && e.message);
+        return null;
+    } finally {
+        clearTimeout(timer);
     }
-    return null;
+}
+
+const ICON_SCHEME_OK = new Set(['http:', 'https:']);
+const HOST_DENY = /(^|\.)(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|metadata\.google|i-1\.internal)/i;
+// 只接受位图，绝不放行 HTML/SVG/XML。SVG 仅对「可信图床」放行（见 safeFetchIcon 的 allowSvg）
+const ICON_CT_OK = /^image\/(png|jpeg|gif|webp|ico|x-icon|vnd\.microsoft\.icon|avif|bmp)/i;
+
+async function safeFetchIcon(target, ms = 3500, allowSvg = false) {
+    let u;
+    try { u = new URL(target); } catch { return null; }
+    if (!ICON_SCHEME_OK.has(u.protocol)) return null;
+    if (HOST_DENY.test(u.hostname)) return null;
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    try {
+        const res = await fetch(u.toString(), {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+            redirect: 'follow',
+            signal: ctrl.signal,
+        });
+        if (!res.ok) return null;
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        if (allowSvg) {
+            if (!ICON_CT_OK.test(ct) && ct !== 'image/svg+xml') return null;
+        } else if (!ICON_CT_OK.test(ct)) {
+            return null;
+        }
+        return res;
+    } catch (e) {
+        // console.warn('icon fetch failed', e && e.name);
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 async function handleIconProxy(request, ctx) {
@@ -2979,41 +3236,64 @@ async function handleIconProxy(request, ctx) {
     
     let response = await cache.match(cacheKey);
 
+    const buildResp = (body, extraHeaders = {}) => new Response(body, {
+        status: 200,
+        headers: {
+            'Content-Type': 'image/png',
+            'X-Content-Type-Options': 'nosniff',
+            'Content-Security-Policy': "default-src 'none'; sandbox",
+            'Content-Disposition': 'inline; filename="icon"',
+            'Referrer-Policy': 'no-referrer',
+            'Cross-Origin-Resource-Policy': 'same-origin',
+            ...extraHeaders,
+        }
+    });
+    // 对已通过 safeFetchIcon 白名单(位图/SVG)的上游 Response，按其真实类型返回。
+    const buildRespFromUpstream = (upstream, extraHeaders = {}) => {
+        const rawCt = (upstream.headers.get('content-type') || '').toLowerCase();
+        const ct = rawCt === 'image/svg+xml' ? 'image/svg+xml' : 'image/png';
+        return buildResp(upstream.body, { 'Content-Type': ct, ...extraHeaders });
+    };
     if (response) {
         response = new Response(response.body, response);
         response.headers.set('X-Icon-Cache-Status', 'HIT');
     } else {
         let upstreamResponse = null;
-        if (USE_DEFAULT_IMGAPI) {
-            const upstreamApi = `${DEFAULT_IMGAPI}${encodeURIComponent(targetUrl)}`;
-            upstreamResponse = await fetch(upstreamApi, {
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
-            });
+        if (PREFER_ICON_API) {
+            const upstreamApi = `${ICON_API}${encodeURIComponent(targetUrl)}`;
+            upstreamResponse = await safeFetchIcon(upstreamApi, 3500, true);
+            if (!upstreamResponse) {
+                upstreamResponse = await safeFetchIcon(new URL('/favicon.ico', targetUrl).toString(), 3500);
+                if (!upstreamResponse) {
+                    upstreamResponse = await fetchBestIcon(targetUrl);
+                }
+            }
         } else {
-            upstreamResponse = await fetchBestIcon(targetUrl);
+            upstreamResponse = await safeFetchIcon(new URL('/favicon.ico', targetUrl).toString(), 3500);
+            if (!upstreamResponse) {
+                upstreamResponse = await fetchBestIcon(targetUrl);
+            }
         }
         if (upstreamResponse) {
-            response = new Response(upstreamResponse.body, upstreamResponse);
-            response.headers.set('Cache-Control', 'public, max-age=604800, s-maxage=604800');
-            response.headers.set('Access-Control-Allow-Origin', '*');
-            response.headers.set('X-Icon-Cache-Status', 'MISS');
+            response = buildRespFromUpstream(upstreamResponse, {
+                'Cache-Control': 'public, max-age=604800, s-maxage=604800, immutable',
+                'Access-Control-Allow-Origin': '*',
+                'X-Icon-Cache-Status': 'MISS',
+            });
             ctx.waitUntil(cache.put(cacheKey, response.clone()));
         } else {
-            const defaultSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 64 64">
-                <path fill="#000000" d="M62 32C62 15.432 48.568 2 32 2C15.861 2 2.703 14.746 2.031 30.72c-.008.196-.01.395-.014.592c-.005.23-.017.458-.017.688v.101C2 48.614 15.432 62 32 62s30-13.386 30-29.899l-.002-.049zM37.99 59.351c-.525-.285-1.029-.752-1.234-1.388c-.371-1.152-.084-2.046.342-3.086c.34-.833-.117-1.795.109-2.667c.441-1.697.973-3.536.809-5.359c-.102-1.119-.35-1.17-1.178-1.816c-.873-.685-.873-1.654-1.457-2.52c-.529-.787.895-3.777.498-3.959c-.445-.205-1.457.063-1.777-.362c-.344-.458-.584-.999-1.057-1.354c-.305-.229-1.654-.995-2.014-.941c-1.813.271-3.777-1.497-4.934-2.65c-.797-.791-1.129-1.678-1.713-2.593c-.494-.775-1.242-.842-1.609-1.803c-.385-1.004-.156-2.29-.273-3.346c-.127-1.135-.691-1.497-1.396-2.365c-1.508-1.863-2.063-4.643-4.924-4.643c-1.537 0-1.428 3.348-2.666 2.899c-1.4-.507-3.566 1.891-3.535 1.568c.164-1.674 1.883-2.488 2.051-2.987c.549-1.638-2.453-1.246-2.068-2.612c.188-.672 2.098-1.161 1.703-1.562c-.119-.122-1.58-1.147-1.508-1.198c.271-.19 1.449.412 1.193-.37c-.086-.26-.225-.499-.357-.74a28 28 0 0 1 1.92-1.975c1.014-.083 2.066-.02 2.447.054c2.416.476 3.256 1.699 5.672.794c1.162-.434 5.445.319 6.059 1.537c.334.666 1.578-.403 2.063-.475c.52-.078 1.695.723 2.053.232c.943-1.291-.604-1.827 1.223-.833c1.225.667 3.619-2.266 2.861 1.181c-.547 2.485-2.557 2.54-4.031 4.159c-1.451 1.594 2.871 2.028 2.982 3.468c.32 4.146 2.531-.338 1.939-1.812c-1.145-2.855 1.303-2.071 2.289-.257c.547 1.007.963.159 1.633-.192c.543-.283.688 1.25.805 1.517c.385.887 1.65 1.152 1.436 2.294c-.238 1.259-1.133.881-2.008 1.094c-.977.237.158 1.059.016 1.359c-.154.328-1.332.464-1.646.65c-.924.544-.359 1.605-1.082 2.175c-.496.392-.996.137-1.092.871c-.113.865-1.707 1.143-1.5 1.97c.057.227.516 1.923.227 2.013c-.133.043-1.184-1.475-1.471-1.627c-.568-.301-3.15-.055-3.482 1.654c-.215 1.105 1.563 2.85 2.016 1.328c.561-1.873.828 1.091.693 1.207c.268.234 1.836-.385 1.371.7c-.197.459.193 1.656.889 1.287c.291-.154 1.041.31 1.172.061a2.14 2.14 0 0 1 .742-.692c.701-.41 1.75-.025 2.518.02c.469.027 4.313 2.124 4.334 2.545c.084 1.575 2.99 1.37 3.436 1.933c1.199 1.526.83.751-.045 2.706c-.441.984-.057 2.191-1.125 2.904c-.514.342-1.141.171-1.598.655c-.412.437-.25.959-.5 1.464c-.301.601-4.346 4.236-4.613 5.115c-.133.441-1.34.825-.322 1.248c.592.174-1.311 1.973-.396 2.718c.223.181.369.334.479.471c-.457.122-.91.233-1.369.333M35.594 4.237c-.039.145.02.316.271.483c.566.375-.162 1.208-.943.671c-.779-.537-2.531.241-2.41.644c.119.403.66.563 1.496.242c.834-.322 1.178.048 1.318.43c.096.259 0 .403-.027.752c-.025.349-.996.107-1.803.162c-.809.054-1.67-.162-1.645-.619c.027-.456-.861-1.289-1.391-1.637c-.529-.348.232-1.1.934-.537c.699.564.727-.107 1.535-.321c.459-.122.275-.305.119-.479q1.29.047 2.546.209m3.517 8.869c.605.164 1.656.929 1.656 1.291c0 .363-.477.817-.688.765c-1.523-.371-2.807-1.874-3.514-2.697c-1.234-1.435-1.156-.205-3.111-.826c-.5-.16-1.293-1.711-.768-2.476s1.131-.886 1.615-.683c.484.2 1.898-.645 2.223.362c.322 1.007 1.211 2.292 2.02 2.636c.81.342-.04 1.464.567 1.628m.485 4.673c.242.483-1.455-.564-1.859-1.047c-.402-.482-1.01-1.571-.523-2.054c.484-.482 1.57 1.005 2.141 1.33c1.129.645-.001 1.289.241 1.771m-8.594-7.315c.117-.161.365.242.586.645s-.084.971-.586.885c-.502-.084-.281-1.136 0-1.53m0-4.052s.473 1.154 0 .966s-.496-.671 0-.966m.096 3.65c-.135-.321-.166-1.64.162-2.04c.484-.59 1.266.564.74 1.02c-.525.457-.768 1.343-.902 1.02m-6.077 1.415c-.879-.063-.898-.823-1.02-1.226s-.85.765-1.586 0s.172-1.771.01-2.376c-.162-.604 1.736 0 2.02 0s1.051 1.248 1.252 1.227c.203-.02 1.293.987 1.293.584c0-.402.166-1.088.93-1.168c1.172-.121.121 1.289.08 1.838c-.039.549.891 1.504 1.232 1.907c.344.403-.867.686-1.07.443c-.201-.242-.727 0-1.172.322c-.443.322-1.656-.443-2.221-.685c-.566-.241 1.131-.804.252-.866m3.141-6.354c.781.269 1.225.51 1.609 0c.371-.492.654 1.073.385 1.502c-.27.431-.781.324-.863 0c-.08-.32-1.912-1.771-1.131-1.502m1.131 4.859c-.268-.35-.295-.752 0-1.047c.297-.295.201-.644.729-.751c.26-.054.295.348.295.724s.324.859 0 1.448c-.323.589-.754-.026-1.024-.374m2.205-5.969c-.012.074-.061.118-.184.106a.6.6 0 0 1-.236-.095q.21-.008.42-.011M25.389 5.15c.619 0 .539.418 1.051.719c.512.3.242-1.552.592-.854c.35.697 1.389 1.664.889 1.851c-.43.163-2.234.859-2.396.739s-.377-.63-.809-.739c-.432-.107-.889-1.127-1.186-1.1c-.113.01-.123-.184-.049-.442a28 28 0 0 1 1.572-.455c.058.158.146.281.336.281m13.519 30.025c-.645.666-1.756-.464-2.523-.424s-1.152-.765-1.818-.684c-.668.079.182-.847 1.111-.362c.927.483 3.756.925 3.23 1.47m12.93-22.934c-.188.24-.402.408-.607.585c-.605.524-1.736.484-1.898.846s-.566 1.489-1.98 1.494s-1.01 2.131-1.131 2.738s-.443 1.325-.848.801s-.566-.323-1.816-1.853s-.77-2.375-.365-2.818c.404-.442.566-1.49 0-1.329s-.889-.202-.768-.703s.727-.867 0-1.402s-.324-2.445-.889-4.189c-.566-1.745-1.334-.51-2.586-.443s-1.455-.873-.889-1.303a27.95 27.95 0 0 1 13.777 7.576"/>
-            </svg>`;
-            
-            response = new Response(defaultSVG, {
+            const fallbackSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" style="display:block;width:100%;height:100%"><rect width="64" height="64" fill="white"/><path fill="black" d="M62 32C62 15.432 48.568 2 32 2C15.861 2 2.703 14.746 2.031 30.72c-.008.196-.01.395-.014.592c-.005.23-.017.458-.017.688v.101C2 48.614 15.432 62 32 62s30-13.386 30-29.899l-.002-.049zM37.99 59.351c-.525-.285-1.029-.752-1.234-1.388c-.371-1.152-.084-2.046.342-3.086c.34-.833-.117-1.795.109-2.667c.441-1.697.973-3.536.809-5.359c-.102-1.119-.35-1.17-1.178-1.816c-.873-.685-.873-1.654-1.457-2.52c-.529-.787.895-3.777.498-3.959c-.445-.205-1.457.063-1.777-.362c-.344-.458-.584-.999-1.057-1.354c-.305-.229-1.654-.995-2.014-.941c-1.813.271-3.777-1.497-4.934-2.65c-.797-.791-1.129-1.678-1.713-2.593c-.494-.775-1.242-.842-1.609-1.803c-.385-1.004-.156-2.29-.273-3.346c-.127-1.135-.691-1.497-1.396-2.365c-1.508-1.863-2.063-4.643-4.924-4.643c-1.537 0-1.428 3.348-2.666 2.899c-1.4-.507-3.566 1.891-3.535 1.568c.164-1.674 1.883-2.488 2.051-2.987c.549-1.638-2.453-1.246-2.068-2.612c.188-.672 2.098-1.161 1.703-1.562c-.119-.122-1.58-1.147-1.508-1.198c.271-.19 1.449.412 1.193-.37c-.086-.26-.225-.499-.357-.74a28 28 0 0 1 1.92-1.975c1.014-.083 2.066-.02 2.447.054c2.416.476 3.256 1.699 5.672.794c1.162-.434 5.445.319 6.059 1.537c.334.666 1.578-.403 2.063-.475c.52-.078 1.695.723 2.053.232c.943-1.291-.604-1.827 1.223-.833c1.225.667 3.619-2.266 2.861 1.181c-.547 2.485-2.557 2.54-4.031 4.159c-1.451 1.594 2.871 2.028 2.982 3.468c.32 4.146 2.531-.338 1.939-1.812c-1.145-2.855 1.303-2.071 2.289-.257c.547 1.007.963.159 1.633-.192c.543-.283.688 1.25.805 1.517c.385.887 1.65 1.152 1.436 2.294c-.238 1.259-1.133.881-2.008 1.094c-.977.237.158 1.059.016 1.359c-.154.328-1.332.464-1.646.65c-.924.544-.359 1.605-1.082 2.175c-.496.392-.996.137-1.092.871c-.113.865-1.707 1.143-1.5 1.97c.057.227.516 1.923.227 2.013c-.133.043-1.184-1.475-1.471-1.627c-.568-.301-3.15-.055-3.482 1.654c-.215 1.105 1.563 2.85 2.016 1.328c.561-1.873.828 1.091.693 1.207c.268.234 1.836-.385 1.371.7c-.197.459.193 1.656.889 1.287c.291-.154 1.041.31 1.172.061a2.14 2.14 0 0 1 .742-.692c.701-.41 1.75-.025 2.518.02c.469.027 4.313 2.124 4.334 2.545c.084 1.575 2.99 1.37 3.436 1.933c1.199 1.526.83.751-.045 2.706c-.441.984-.057 2.191-1.125 2.904c-.514.342-1.141.171-1.598.655c-.412.437-.25.959-.5 1.464c-.301.601-4.346 4.236-4.613 5.115c-.133.441-1.34.825-.322 1.248c.592.174-1.311 1.973-.396 2.718c.223.181.369.334.479.471c-.457.122-.91.233-1.369.333M35.594 4.237c-.039.145.02.316.271.483c.566.375-.162 1.208-.943.671c-.779-.537-2.531.241-2.41.644c.119.403.66.563 1.496.242c.834-.322 1.178.048 1.318.43c.096.259 0 .403-.027.752c-.025.349-.996.107-1.803.162c-.809.054-1.67-.162-1.645-.619c.027-.456-.861-1.289-1.391-1.637c-.529-.348.232-1.1.934-.537c.699.564.727-.107 1.535-.321c.459-.122.275-.305.119-.479q1.29.047 2.546.209m3.517 8.869c.605.164 1.656.929 1.656 1.291c0 .363-.477.817-.688.765c-1.523-.371-2.807-1.874-3.514-2.697c-1.234-1.435-1.156-.205-3.111-.826c-.5-.16-1.293-1.711-.768-2.476s1.131-.886 1.615-.683c.484.2 1.898-.645 2.223.362c.322 1.007 1.211 2.292 2.02 2.636c.81.342-.04 1.464.567 1.628m.485 4.673c.242.483-1.455-.564-1.859-1.047c-.402-.482-1.01-1.571-.523-2.054c.484-.482 1.57 1.005 2.141 1.33c1.129.645-.001 1.289.241 1.771m-8.594-7.315c.117-.161.365.242.586.645s-.084.971-.586.885c-.502-.084-.281-1.136 0-1.53m0-4.052s.473 1.154 0 .966s-.496-.671 0-.966m.096 3.65c-.135-.321-.166-1.64.162-2.04c.484-.59 1.266.564.74 1.02c-.525.457-.768 1.343-.902 1.02m-6.077 1.415c-.879-.063-.898-.823-1.02-1.226s-.85.765-1.586 0s.172-1.771.01-2.376c-.162-.604 1.736 0 2.02 0s1.051 1.248 1.252 1.227c.203-.02 1.293.987 1.293.584c0-.402.166-1.088.93-1.168c1.172-.121.121 1.289.08 1.838c-.039.549.891 1.504 1.232 1.907c.344.403-.867.686-1.07.443c-.201-.242-.727 0-1.172.322c-.443.322-1.656-.443-2.221-.685c-.566-.241 1.131-.804.252-.866m3.141-6.354c.781.269 1.225.51 1.609 0c.371-.492.654 1.073.385 1.502c-.27.431-.781.324-.863 0c-.08-.32-1.912-1.771-1.131-1.502m1.131 4.859c-.268-.35-.295-.752 0-1.047c.297-.295.201-.644.729-.751c.26-.054.295.348.295.724s.324.859 0 1.448c-.323.589-.754-.026-1.024-.374m2.205-5.969c-.012.074-.061.118-.184.106a.6.6 0 0 1-.236-.095q.21-.008.42-.011M25.389 5.15c.619 0 .539.418 1.051.719c.512.3.242-1.552.592-.854c.35.697 1.389 1.664.889 1.851c-.43.163-2.234.859-2.396.739s-.377-.63-.809-.739c-.432-.107-.889-1.127-1.186-1.1c-.113.01-.123-.184-.049-.442a28 28 0 0 1 1.572-.455c.058.158.146.281.336.281m13.519 30.025c-.645.666-1.756-.464-2.523-.424s-1.152-.765-1.818-.684c-.668.079.182-.847 1.111-.362c.927.483 3.756.925 3.23 1.47m12.93-22.934c-.188.24-.402.408-.607.585c-.605.524-1.736.484-1.898.846s-.566 1.489-1.98 1.494s-1.01 2.131-1.131 2.738s-.443 1.325-.848.801s-.566-.323-1.816-1.853s-.77-2.375-.365-2.818c.404-.442.566-1.49 0-1.329s-.889-.202-.768-.703s.727-.867 0-1.402s-.324-2.445-.889-4.189c-.566-1.745-1.334-.51-2.586-.443s-1.455-.873-.889-1.303a27.95 27.95 0 0 1 13.777 7.576"/></svg>';
+            response = new Response(fallbackSvg, {
                 status: 200,
                 headers: {
                     'Content-Type': 'image/svg+xml',
-                    'Cache-Control': 'public, max-age=3600' 
-                }
+                    'Cache-Control': 'public, max-age=604800, s-maxage=604800, immutable',
+                    'Access-Control-Allow-Origin': '*',
+                    'X-Icon-Cache-Status': 'DEFAULT',
+                    'Cross-Origin-Resource-Policy': 'same-origin',
+                },
             });
-            response.headers.set('X-Icon-Cache-Status', 'DEFAULT');
         }
-        response.headers.set('Access-Control-Allow-Origin', '*');
-    
     }
 
     return response;
@@ -3065,33 +3345,170 @@ async function handleSmartBackup(env, currentData) {
     }
 }
 
-function jsonResp(data, status = 200) {
-    return new Response(JSON.stringify(data), {
-        status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+function assertEnv(env) {
+    const messages = [];
+    if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) {
+        messages.push('JWT_SECRET 未配置或强度不足（需 ≥32 字符）');
+    }
+    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8) {
+        messages.push('ADMIN_PASSWORD 未配置或过短');
+    }
+    if (messages.length > 0) {
+        const e = new Error(`FATAL: 配置缺失或无效: ${messages.join('; ')}`);
+        e.code = 'CONFIG_ERROR';
+        e.messages = messages;
+        throw e;
+    }
+}
+
+const EMPTY_DATA = { categories: {} };
+
+function safeJsonParse(text, fallback) {
+    if (typeof text !== 'string' || text === '') return { ok: false, data: fallback };
+    try {
+        const v = JSON.parse(text);
+        if (!v || typeof v !== 'object' || Array.isArray(v)) return { ok: false, data: fallback };
+        return { ok: true, data: v };
+    } catch (e) {
+        return { ok: false, data: fallback };
+    }
+}
+
+const MAX_CATEGORIES = 100;
+const MAX_LINKS_TOTAL = 3000;
+const MAX_NAME = 120, MAX_TIPS = 500, MAX_URL = 2048;
+const URL_SCHEME_OK = new Set(['http:', 'https:']);
+
+function validateCategories(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'CATEGORIES_TYPE' };
+    const keys = Object.keys(raw);
+    if (keys.length > MAX_CATEGORIES) return { ok: false, reason: 'TOO_MANY_CATEGORIES' };
+
+    let total = 0;
+    for (const name of keys) {
+        if (typeof name !== 'string' || name.length === 0 || name.length > MAX_NAME) {
+            return { ok: false, reason: 'BAD_CATEGORY_NAME' };
+        }
+        const cat = raw[name];
+        const links = Array.isArray(cat) ? cat : (cat && Array.isArray(cat.links) ? cat.links : null);
+        if (!links) return { ok: false, reason: 'BAD_CATEGORY_SHAPE' };
+
+        total += links.length;
+        for (const l of links) {
+            if (!l || typeof l !== 'object') return { ok: false, reason: 'BAD_LINK' };
+            if (typeof l.name !== 'string' || l.name.length === 0 || l.name.length > MAX_NAME) return { ok: false, reason: 'BAD_NAME' };
+            if (typeof l.url !== 'string' || l.url.length === 0 || l.url.length > MAX_URL) return { ok: false, reason: 'BAD_URL' };
+
+            let u;
+            try { u = new URL(l.url); } catch { return { ok: false, reason: 'BAD_URL_FORMAT' }; }
+            if (!URL_SCHEME_OK.has(u.protocol)) return { ok: false, reason: 'URL_SCHEME' };
+
+            if (l.tips != null && typeof l.tips !== 'string') return { ok: false, reason: 'BAD_TIPS' };
+            if (l.icon != null && typeof l.icon !== 'string') return { ok: false, reason: 'BAD_ICON' };
+            for (const flag of ['isPrivate', 'isDirect']) {
+                if (l[flag] != null && typeof l[flag] !== 'boolean') return { ok: false, reason: 'BAD_FLAG' };
+            }
+        }
+    }
+    if (total > MAX_LINKS_TOTAL) return { ok: false, reason: 'TOO_MANY_LINKS' };
+    return { ok: true };
+}
+
+function sanitizeCategories(raw) {
+    const out = {};
+    for (const name of Object.keys(raw)) {
+        const cat = Array.isArray(raw[name]) ? { isHidden: false, links: raw[name] } : raw[name];
+        out[name] = {
+            isHidden: !!cat.isHidden,
+            links: (cat.links || []).map(l => ({
+                name: String(l.name).slice(0, MAX_NAME),
+                url: String(l.url).slice(0, MAX_URL),
+                tips: l.tips ? String(l.tips).slice(0, MAX_TIPS) : '',
+                icon: l.icon ? String(l.icon).slice(0, MAX_URL) : '',
+                isPrivate: !!l.isPrivate,
+                isDirect: !!l.isDirect,
+                // 保留/回填分类归属：优先用传入值，缺失则用所在分类 key，避免 link.category 丢失后变成 undefined 分类
+                category: l.category ? String(l.category).slice(0, MAX_NAME) : name,
+            })),
+        };
+    }
+    return out;
+}
+
+async function readJsonBody(request, maxBytes = 8 * 1024 * 1024) {
+    const len = Number(request.headers.get('content-length') || 0);
+    if (len > maxBytes) return { ok: false, reason: 'TOO_LARGE' };
+    let text;
+    try { text = await request.text(); } catch { return { ok: false, reason: 'READ_FAILED' }; }
+    if (text.length > maxBytes) return { ok: false, reason: 'TOO_LARGE' };
+    try { return { ok: true, data: JSON.parse(text) }; }
+    catch { return { ok: false, reason: 'BAD_JSON' }; }
 }
 
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
 
-        if (request.method === 'OPTIONS') {
-            return new Response(null, { headers: corsHeaders });
-        }
-
-        if (url.pathname === '/api/icon') {
-            return handleIconProxy(request, ctx);
-        }
-
-        if (url.pathname === '/') {
-            return new Response(HTML_CONTENT, {
+        try {
+            assertEnv(env);
+        } catch (e) {
+            console.error('CONFIG_ERROR:', e.message);
+            return new Response(JSON.stringify({
+                error: 'Server is not configured',
+                messages: (e.code === 'CONFIG_ERROR' && Array.isArray(e.messages)) ? e.messages : []
+            }), {
+                status: 500,
                 headers: {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'no-cache, max-age=0, must-revalidate',
-                    'Vary': 'Accept-Encoding'
+                    'Content-Type': 'application/json',
+                    ...corsHeaders(request, env),
                 }
             });
+        }
+
+        resolveConfig(env);
+
+        try {
+            if (request.method === 'OPTIONS') {
+                return new Response(null, { headers: {
+                    ...corsHeaders(request, env),
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                    'Access-Control-Max-Age': '86400',
+                } });
+            }
+
+            if (url.pathname === '/api/icon') {
+                return handleIconProxy(request, ctx);
+            }
+
+        if (url.pathname === '/' || url.pathname === '/index.html') {
+            const { etag, body } = await htmlMeta();
+
+            if (request.headers.get('If-None-Match') === etag) {
+                return new Response(null, {
+                    status: 304,
+                    headers: {
+                        'ETag': etag,
+                        'Cache-Control': 'public, max-age=60, s-maxage=300, must-revalidate',
+                    },
+                });
+            }
+
+            // 边缘缓存命中 → 0 回源
+            const cacheKey = new Request(url.origin + '/', { method: 'GET' });
+            const hit = await caches.default.match(cacheKey);
+            if (hit) return hit;
+
+            const res = new Response(body, {
+                headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'ETag': etag,
+                    'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=600',
+                    'Vary': 'Accept-Encoding',
+                },
+            });
+            ctx.waitUntil(caches.default.put(cacheKey, res.clone()).catch(e => console.warn('html cache put failed', e)));
+            return res;
         }
 
         if (url.pathname === '/api/login' && request.method === 'POST') {
@@ -3107,29 +3524,32 @@ export default {
 
                 if (attempts >= MAX_ATTEMPTS) {
                     const waitSec = Math.max(1, Math.ceil((expiredAt - Date.now()) / 1000));
-                    return new Response(JSON.stringify({ valid: false, locked: true, remaining: 0, retryAfter: waitSec }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    return new Response(JSON.stringify({ valid: false, locked: true, remaining: 0, retryAfter: waitSec }), { status: 429, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
                 }
 
                 const { password } = await request.json();
-                if (password !== env.ADMIN_PASSWORD) {
+                const passwordOk = typeof password === 'string' && (await timingSafeStringEqual(password, env.ADMIN_PASSWORD));
+                if (!passwordOk) {
                     const newAttempts = attempts + 1;
                     const newExpiredAt = Date.now() + LOCK_MS;
                     await env.CARD_ORDER.put(rateLimitKey, String(newAttempts), { expirationTtl: 900, metadata: { expiredAt: newExpiredAt } });
                     const remaining = Math.max(0, MAX_ATTEMPTS - newAttempts);
                     if (newAttempts >= MAX_ATTEMPTS) {
-                        return new Response(JSON.stringify({ valid: false, locked: true, remaining: 0, retryAfter: Math.max(1, Math.ceil((newExpiredAt - Date.now()) / 1000)) }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                        return new Response(JSON.stringify({ valid: false, locked: true, remaining: 0, retryAfter: Math.max(1, Math.ceil((newExpiredAt - Date.now()) / 1000)) }), { status: 429, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
                     }
-                    return new Response(JSON.stringify({ valid: false, remaining }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    return new Response(JSON.stringify({ valid: false, remaining }), { status: 403, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
                 }
                 await env.CARD_ORDER.delete(rateLimitKey);
 
                 const currentTime = Math.floor(Date.now() / 1000);
+                const kid = await currentKeyGen(env);
 
                 const accessTokenPayload = { 
                     iat: currentTime, 
                     exp: currentTime + 7200, 
                     role: 'admin',
-                    type: 'access' 
+                    type: 'access',
+                    kid
                 };
                 const accessToken = await createJWT(accessTokenPayload, env.JWT_SECRET);
                 
@@ -3137,7 +3557,8 @@ export default {
                     iat: currentTime, 
                     exp: currentTime + 2592000, 
                     role: 'admin',
-                    type: 'refresh' 
+                    type: 'refresh',
+                    kid
                 };
                 const refreshToken = await createJWT(refreshTokenPayload, env.JWT_SECRET);
                 
@@ -3146,14 +3567,14 @@ export default {
                     token: `Bearer ${accessToken}` 
                 }), { 
                     status: 200, 
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                    headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } 
                 });
                 
                 response.headers.append('Set-Cookie', `refreshToken=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/api/refreshToken; Max-Age=2592000`);
                 
                 return response;
             } catch (e) {
-                return new Response(JSON.stringify({ valid: false, error: 'Auth failed' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                return new Response(JSON.stringify({ valid: false, error: 'Auth failed' }), { status: 403, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
             }
         }
 
@@ -3163,25 +3584,31 @@ export default {
                 const refreshToken = cookies.refreshToken;
                 
                 if (!refreshToken) {
-                    return new Response(JSON.stringify({ error: 'Refresh token missing' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    return new Response(JSON.stringify({ error: 'Refresh token missing' }), { status: 401, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
                 }
                 
                 const payload = await validateJWT(refreshToken, env.JWT_SECRET);
                 const currentTime = Math.floor(Date.now() / 1000);
 
                 if (!payload || payload.exp < currentTime) {
-                    return new Response(JSON.stringify({ error: 'Refresh token expired' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    return new Response(JSON.stringify({ error: 'Refresh token expired' }), { status: 401, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
                 }
                 
                 if (payload.type !== 'refresh') {
-                    return new Response(JSON.stringify({ error: 'Invalid token type' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    return new Response(JSON.stringify({ error: 'Invalid token type' }), { status: 400, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
+                }
+
+                const kid = await currentKeyGen(env);
+                if (!payload.kid || payload.kid !== kid) {
+                    return new Response(JSON.stringify({ error: 'Refresh token revoked' }), { status: 401, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
                 }
                 
                 const newAccessTokenPayload = { 
                     iat: currentTime, 
                     exp: currentTime + 7200, 
                     role: 'admin',
-                    type: 'access'
+                    type: 'access',
+                    kid
                 };
                 const newAccessToken = await createJWT(newAccessTokenPayload, env.JWT_SECRET);
 
@@ -3189,7 +3616,8 @@ export default {
                     iat: currentTime,
                     exp: currentTime + 2592000,
                     role: 'admin',
-                    type: 'refresh'
+                    type: 'refresh',
+                    kid
                 };
                 const newRefreshToken = await createJWT(newRefreshTokenPayload, env.JWT_SECRET);
                 
@@ -3197,14 +3625,14 @@ export default {
                     accessToken: `Bearer ${newAccessToken}` 
                 }), { 
                     status: 200, 
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                    headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } 
                 });
 
                 response.headers.append('Set-Cookie', `refreshToken=${newRefreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/api/refreshToken; Max-Age=2592000`);
 
                 return response;
             } catch (e) {
-                return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
             }
         }
 
@@ -3212,69 +3640,84 @@ export default {
             const validation = await validateServerToken(request.headers.get('Authorization'), env);
             return new Response(JSON.stringify(validation.isValid ? { valid: true } : validation.response), {
                 status: validation.status || 200, 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' }
             });
         }
 
         if (url.pathname === '/api/getLinks') {
-            const authToken = request.headers.get('Authorization');
-            const dataStr = await env.CARD_ORDER.get(DEFAULT_USER);
+            const authHeader = request.headers.get('Authorization');
 
-            if (dataStr) {
-                const parsedData = JSON.parse(dataStr);
-                const normalizedCategories = normalizeCategories(parsedData.categories || {});
-                let isAuthorized = false;
-
-                if (authToken) {
-                    const validation = await validateServerToken(authToken, env);
-                    if (validation.isValid) {
-                        isAuthorized = true;
-                    }
-                }
-
-                if (isAuthorized) {
-                    return new Response(JSON.stringify(parsedData), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
-                }
-
-                const filteredCategories = {};
-                for (const cat in normalizedCategories) {
-                    const catData = normalizedCategories[cat];
-                    if (!catData.isHidden) {
-                        const publicLinks = (catData.links || []).filter(l => !l.isPrivate);
-                        if (publicLinks.length > 0) {
-                            filteredCategories[cat] = { ...catData, links: publicLinks };
-                        }
-                    }
-                }
-                return new Response(JSON.stringify({ categories: filteredCategories }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+            let scope = 'anon';
+            if (authHeader) {
+                const v = await validateServerToken(authHeader, env);
+                if (v.isValid) scope = 'authed';
             }
-            return new Response(JSON.stringify({ categories: {} }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+
+            const rev = scope === 'anon' ? await getDataRev(env) : '0';
+            const cacheKey = cacheKeyFor(url, rev, scope);
+
+            // ② 边缘缓存命中 → 0 KV 读
+            if (scope === 'anon') {
+                const hit = await CACHE.match(cacheKey);
+                if (hit) {
+                    const r = new Response(hit.body, hit);
+                    r.headers.set('X-KV-Cache', 'HIT');
+                    return r;
+                }
+            }
+
+            const data = await readLinksKv(env);
+
+            if (data && data.categories) {
+                for (const name of Object.keys(data.categories)) {
+                    for (const l of data.categories[name].links || []) {
+                        if (l.category === undefined || l.category === null) l.category = name;
+                    }
+                }
+            }
+            let body, cacheable;
+
+            if (scope === 'authed') {
+                body = JSON.stringify(data);
+                cacheable = false;
+            } else {
+                body = JSON.stringify({ categories: filterPublic(data.categories) });
+                cacheable = true;
+            }
+            return sendCached(body, request, cacheKey, cacheable, { 'X-KV-Cache': 'MISS' });
         }
 
         if (url.pathname === '/api/saveData' && request.method === 'POST') {
             const validation = await validateServerToken(request.headers.get('Authorization'), env);
-            if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+            if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
+
+            const body = await readJsonBody(request);
+            if (!body.ok) return new Response(JSON.stringify({ error: body.reason }), { status: body.reason === 'TOO_LARGE' ? 413 : 400, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
+            const categories = body.data.categories;
+
+            const check = validateCategories(categories);
+            if (!check.ok) return new Response(JSON.stringify({ error: 'INVALID_DATA', detail: check.reason }), { status: 422, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
 
             try {
-                const { categories } = await request.json();
-                
                 const currentData = await env.CARD_ORDER.get(DEFAULT_USER);
                 
                 if (currentData) {
                     ctx.waitUntil(handleSmartBackup(env, currentData));
                 }
 
-                await env.CARD_ORDER.put(DEFAULT_USER, JSON.stringify({ categories }));
+                await env.CARD_ORDER.put(DEFAULT_USER, JSON.stringify({ categories: sanitizeCategories(categories) }));
+
+                const rev = await bumpRev(env);
                 
-                return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+                return new Response(JSON.stringify({ success: true, rev }), { status: 200, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
             } catch (e) {
-                return new Response(JSON.stringify({ error: 'Bad Request' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+                return new Response(JSON.stringify({ error: 'Bad Request' }), { status: 400, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
             }
         }
 
         if (url.pathname === '/api/backupData' && request.method === 'POST') {
             const validation = await validateServerToken(request.headers.get('Authorization'), env);
-            if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+            if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
             
             const sourceData = await env.CARD_ORDER.get(DEFAULT_USER);
             
@@ -3286,33 +3729,55 @@ export default {
                      metadata: { timestamp: now }
                  });
                  
-                 return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+                 return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
             }
-            return new Response(JSON.stringify({ success: false, error: 'User data not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+            return new Response(JSON.stringify({ success: false, error: 'User data not found' }), { status: 404, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
         }
         
         if (url.pathname === '/api/exportData' && request.method === 'POST') {
              const validation = await validateServerToken(request.headers.get('Authorization'), env);
-             if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+             if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
              
              const data = await env.CARD_ORDER.get(DEFAULT_USER);
-             return new Response(data || '{}', { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+             return new Response(data || '{}', { status: 200, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
         }
         
         if (url.pathname === '/api/importData' && request.method === 'POST') {
              const validation = await validateServerToken(request.headers.get('Authorization'), env);
-             if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+             if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
               
-             const body = await request.json();
-             
+             const bodyObj = await readJsonBody(request);
+             if (!bodyObj.ok) return new Response(JSON.stringify({ error: bodyObj.reason }), { status: bodyObj.reason === 'TOO_LARGE' ? 413 : 400, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
+
+             const categories = bodyObj.data.categories || {};
+
+             const check = validateCategories(categories);
+             if (!check.ok) return new Response(JSON.stringify({ error: 'INVALID_DATA', detail: check.reason }), { status: 422, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
+
              const cleanData = {
-                 categories: body.categories || {}
+                 categories: sanitizeCategories(categories)
              };
              
              await env.CARD_ORDER.put(DEFAULT_USER, JSON.stringify(cleanData));
-             return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json'} });
+
+             const rev = await bumpRev(env);
+             return new Response(JSON.stringify({ success: true, rev }), { status: 200, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
         }
 
-        return new Response('Not Found', { status: 404, headers: corsHeaders });
+        if (url.pathname === '/api/logout' && request.method === 'POST') {
+            await bumpKeyGen(env);
+            const response = new Response(JSON.stringify({ success: true }), {
+                status: 200,
+                headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' }
+            });
+            response.headers.append('Set-Cookie', 'refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/api/refreshToken; Max-Age=0');
+            return response;
+        }
+
+        return new Response('Not Found', { status: 404, headers: corsHeaders(request, env) });
+        } catch (e) {
+            console.error('UNHANDLED', e, url.pathname, request.method);
+            return new Response(JSON.stringify({ error: 'INTERNAL' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        }
     }
 };
