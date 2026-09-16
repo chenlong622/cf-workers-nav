@@ -70,7 +70,7 @@
 |---|---|---|---|
 | `ADMIN_PASSWORD` | ✅ 必填 | 管理员登录密码，至少 **8 个字符** | 无 |
 | `JWT_SECRET` | ✅ 必填 | 用于加密 Token 的密钥，建议为 **≥32 字符** 的随机字符串 | 无 |
-| `DEFAULT_USER` | ⬜ 可选 | 默认用户标识，用于区分不同用户的数据 | `testUser` |
+| `DEFAULT_USER` | ⬜ 可选 | 默认用户标识| `testUser` |
 | `ALLOWED_ORIGINS` | ⬜ 可选 | 允许跨域访问的来源，多个用英文逗号分隔 | 空（不限制） |
 | `ICON_API` | ⬜ 可选 | 图标API地址 |已内置xinac|
 | `PREFER_ICON_API` | ⬜ 可选 | 是否优先使用图标API | `true` |
