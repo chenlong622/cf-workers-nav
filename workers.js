@@ -450,7 +450,7 @@ const HTML_CONTENT = `
                             
                             <!-- Custom Search Engine Dropdown -->
                             <div class="relative h-full" id="search-engine-wrapper">
-                                <button id="search-engine-btn" class="h-full pl-3 pr-2 flex items-center gap-2 text-sm text-muted-foreground hover:text-accent hover:bg-muted dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] rounded-l-xl transition-colors outline-none w-auto md:min-w-[5.5rem]">
+                                <button id="search-engine-btn" class="h-full pl-3 pr-2 flex items-center gap-2 text-sm text-muted-foreground hover:text-accent hover:bg-muted dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] rounded-l-[var(--radius-xl)] transition-colors outline-none w-auto md:min-w-[5.5rem]">
                                     <!-- 默认显示本站图标 -->
                                     <span id="current-engine-icon" class="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -460,7 +460,7 @@ const HTML_CONTENT = `
                                 </button>
                                 
                                 <!-- Dropdown Menu -->
-                                <div id="search-engine-menu" class="hidden absolute top-full left-0 mt-2 w-24 bg-card dark:bg-card rounded-xl shadow-xl border border-line dark:border-line overflow-hidden z-50 dropdown-enter">
+                                <div id="search-engine-menu" class="hidden absolute top-full left-0 mt-2 w-24 bg-card dark:bg-card rounded-[var(--radius-xl)] shadow-xl border border-line dark:border-line overflow-hidden z-50 dropdown-enter">
                                     <div class="py-1" id="search-engine-list">
                                         <div class="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">搜索引擎</div>
                                         <!-- JS 自动插入按钮 -->
@@ -476,7 +476,7 @@ const HTML_CONTENT = `
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                             </button>
                             
-                            <button id="search-button" class="h-full px-4 rounded-r-xl text-muted-foreground hover:text-accent dark:hover:text-accent hover:bg-soft dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] transition-colors border-l border-transparent dark:border-[color-mix(in_oklab,var(--border)_50%,transparent)] flex items-center justify-center">
+                            <button id="search-button" class="h-full px-4 rounded-r-[var(--radius-xl)] text-muted-foreground hover:text-accent dark:hover:text-accent hover:bg-soft dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] transition-colors border-l border-transparent dark:border-[color-mix(in_oklab,var(--border)_50%,transparent)] flex items-center justify-center">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             </button>
                         </div>
@@ -654,9 +654,12 @@ const HTML_CONTENT = `
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 pt-2">
-                    <input type="checkbox" id="private-checkbox" class="w-5 h-5 text-accent rounded focus:ring-ring border-line-input bg-base">
-                    <label for="private-checkbox" class="text-sm text-muted-foreground font-medium">设为私密链接 (仅登录可见)</label>
+                <div class="flex items-center gap-3 pt-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="private-checkbox" class="sr-only peer">
+                        <div class="w-9 h-5 bg-[color-mix(in_oklab,var(--foreground)_35%,var(--card))] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] peer-checked:bg-accent"></div>
+                    </label>
+                    <label for="private-checkbox" class="text-sm text-muted-foreground font-medium cursor-pointer select-none">设为私密链接 (仅登录可见)</label>
                 </div>
             </div>
             <div class="flex justify-end gap-3 mt-8">
@@ -1940,7 +1943,7 @@ const HTML_CONTENT = `
 
         if (link.isPrivate && !isAppLayout) {
             const badge = document.createElement('div');
-            badge.className = 'absolute top-0 right-0 w-8 h-8 pointer-events-none overflow-hidden rounded-tr-2xl';
+            badge.className = 'absolute top-0 right-0 w-8 h-8 pointer-events-none overflow-hidden rounded-tr-[var(--radius-2xl)]';
             badge.innerHTML = '<div class="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 rotate-45 w-8 h-8 bg-amber-400"></div>';
             card.appendChild(badge);
         }
