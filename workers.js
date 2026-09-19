@@ -16,9 +16,42 @@ const HTML_CONTENT = `
                         glass: {
                             border: 'rgba(255, 255, 255, 0.2)',
                             darkBorder: 'rgba(255, 255, 255, 0.1)',
-                        }
+                        },
+                        base: {
+                            DEFAULT: 'var(--background)',
+                            foreground: 'var(--foreground)',
+                        },
+                        card: {
+                            DEFAULT: 'var(--card)',
+                            foreground: 'var(--card-foreground)',
+                        },
+                        accent: {
+                            DEFAULT: 'var(--primary)',
+                            foreground: 'var(--primary-foreground)',
+                        },
+                        secondary: {
+                            DEFAULT: 'var(--secondary)',
+                            foreground: 'var(--secondary-foreground)',
+                        },
+                        muted: {
+                            DEFAULT: 'var(--muted)',
+                            foreground: 'var(--muted-foreground)',
+                        },
+                        soft: {
+                            DEFAULT: 'var(--accent)',
+                            foreground: 'var(--accent-foreground)',
+                        },
+                        line: {
+                            DEFAULT: 'var(--border)',
+                            input: 'var(--input)',
+                        },
+                        ring: {
+                            DEFAULT: 'var(--ring)',
+                        },
                     },
-                    
+                    fontFamily: {
+                        sans: 'var(--font-sans)',
+                    },
                     boxShadow: {
                         'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
                         'glass-hover': '0 10px 40px rgba(0, 0, 0, 0.2)',
@@ -28,17 +61,61 @@ const HTML_CONTENT = `
         }
     </script>
     <style>
+        /* ===== 主题 CSS 变量 ===== */
+        :root {
+            --background: #ffffff; --foreground: #1e293b;
+            --card: #ffffff;       --card-foreground: #0f172a;
+            --primary: #10b981;    --primary-foreground: #ffffff;
+            --secondary: #f8fafc;  --secondary-foreground: #334155;
+            --muted: #f1f5f9;      --muted-foreground: #64748b;
+            --accent: #ecfdf5;     --accent-foreground: #059669;
+            --accent-soft: rgba(16, 185, 129, 0.1);
+            --border: #e2e8f0;     --input: #cbd5e1;
+            --ring: #10b981;       --radius: 1rem;
+            --menu-hover: color-mix(in srgb, var(--foreground) 8%, var(--card));
+            --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+            /* 圆角派生体系：默认 --radius=1rem 时与改造前的固定 rem 观感一致，主题改 --radius 后整体缩放 */
+            --radius-sm: calc(var(--radius) * 0.25);
+            --radius-md: calc(var(--radius) * 0.375);
+            --radius-lg: calc(var(--radius) * 0.5);
+            --radius-xl: calc(var(--radius) * 0.75);
+            --radius-2xl: var(--radius);
+        }
+        .dark {
+            --background: #0f172a; --foreground: #f1f5f9;
+            --card: #1e293b;       --card-foreground: #f8fafc;
+            --primary: #34d399;    --primary-foreground: #064e3b;
+            --secondary: #1e293b;  --secondary-foreground: #cbd5e1;
+            --muted: #1e293b;      --muted-foreground: #94a3b8;
+            --accent: #0f172a;     --accent-foreground: #34d399;
+            --accent-soft: rgba(52, 211, 153, 0.15);
+            --border: #334155;     --input: #475569;
+            --ring: #34d399;
+            --menu-hover: color-mix(in srgb, var(--foreground) 16%, var(--card));
+        }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.6); }
+        ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--foreground) 18%, transparent); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--foreground) 35%, transparent); }
+
+        ::selection {
+            background: color-mix(in srgb, var(--primary) 45%, var(--background));
+            color: var(--foreground);
+        }
+        input::selection, textarea::selection, select::selection,
+        [contenteditable="true"]::selection,
+        input ::selection, textarea ::selection, select ::selection,
+        [contenteditable="true"] ::selection {
+            background: color-mix(in srgb, var(--primary) 55%, var(--background));
+            color: var(--card-foreground);
+        }
 
         .loading-spinner-track { border: 4px solid #e2e8f0; }
         .dark .loading-spinner-track { border-color: #334155; }
-        .loading-spinner-arc { border: 4px solid transparent; border-top-color: #10b981; }
-        .dark .loading-spinner-arc { border-top-color: #34d399; }
-        .icon-spinner { border: 2px solid #cbd5e1; border-top-color: #10b981; }
-        .dark .icon-spinner { border-color: #475569; border-top-color: #34d399; }
+        .loading-spinner-arc { border: 4px solid transparent; border-top-color: var(--primary); }
+        .dark .loading-spinner-arc { border-top-color: var(--primary); }
+        .icon-spinner { border: 2px solid #cbd5e1; border-top-color: var(--primary); }
+        .dark .icon-spinner { border-color: #475569; border-top-color: var(--primary); }
 
         @media (max-width: 640px) {
             ::-webkit-scrollbar { display: none; }
@@ -48,7 +125,7 @@ const HTML_CONTENT = `
         .card.dragging {
             opacity: 0.8;
             transform: scale(1.05);
-            border: 2px dashed #10b981;
+            border: 2px dashed var(--primary);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             z-index: 50;
             position: relative;
@@ -109,6 +186,11 @@ const HTML_CONTENT = `
             opacity: 1;
         }
 
+        .theme-card { cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .theme-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+        .theme-card-active { box-shadow: 0 0 0 2px var(--ring-color, rgba(99,102,241,0.5)) inset, 0 8px 24px rgba(0,0,0,0.10); }
+        .theme-card-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+
         .section-anchor {
             scroll-margin-top: 160px;
         }
@@ -162,13 +244,12 @@ const HTML_CONTENT = `
             color: #fbbf24;
         }
         .card-status-tag.online {
-            background: rgba(16, 185, 129, 0.15);
-            color: #059669;
+            background: var(--accent-soft);
+            color: var(--primary);
         }
         html.dark .card-status-tag.online {
-            color: #34d399;
+            color: var(--primary);
         }
-        /* 延迟偏慢（300~1000ms）：橙色 */
         .card-status-tag.slow {
             background: rgba(249, 115, 22, 0.15);
             color: #ea580c;
@@ -184,55 +265,192 @@ const HTML_CONTENT = `
             color: #f87171;
         }
     </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script>
         (function () {
+            // 主题白名单：扩展放行
+            const __THEME_ALLOWED = /^(background|foreground|card|card-foreground|primary|primary-foreground|secondary|secondary-foreground|muted|muted-foreground|accent|accent-foreground|border|input|ring|ring-offset|radius|popover|popover-foreground|destructive|destructive-foreground|success|warning|sidebar|sidebar-foreground|sidebar-primary|sidebar-primary-foreground|sidebar-accent|sidebar-accent-foreground|sidebar-border|sidebar-ring|chart-1|chart-2|chart-3|chart-4|chart-5|shadow-color|font-sans|font-serif|font-mono|font-family)$/;
+            // CSS 值消毒：白名单只放行颜色/长度/字体栈常用字符
+            const __SAFE_CSS_VALUE = /^[a-zA-Z0-9#%.,()\/ '"_+-]{1,160}$/;
+            function __safeCssValue(v) {
+                const s = String(v == null ? '' : v).trim();
+                return __SAFE_CSS_VALUE.test(s) ? s : '';
+            }
+            function __lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 忽略 */ } }
+            function __lsDel(k) { try { localStorage.removeItem(k); } catch (e) { /* 忽略 */ } }
+            function __appendFontStylesheet(link, href) {
+                link.rel = 'stylesheet';
+                link.media = 'print';
+                link.onload = function () { link.media = 'all'; link.onload = null; };
+                link.onerror = function () { if (link.parentNode) link.parentNode.removeChild(link); };
+                link.href = href;
+                document.head.appendChild(link);
+            }
+
+            window.__loadGoogleFont = function (family) {
+                if (family) {
+                    try {
+                        const name = family.split(',')[0].replace(/["']/g, '').trim();
+                        if (name && /^[A-Za-z0-9 _-]+$/.test(name)) {
+                            document.querySelectorAll('link[data-theme-font][data-family="' + name.replace(/"/g, '') + '"]').forEach(el => el.remove());
+                            const link = document.createElement('link');
+                            link.setAttribute('data-theme-font', '1');
+                            link.setAttribute('data-family', name.replace(/"/g, ''));
+                            __appendFontStylesheet(link, 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(name).replace(/%20/g, '+') + ':wght@400;500;600;700&display=swap');
+                        }
+                    } catch (e) { /* 加载失败忽略 */ }
+                }
+                // 中文 fallback
+                try {
+                    let has = false;
+                    document.querySelectorAll('link[data-theme-font]').forEach(el => { if (el.getAttribute('data-family') === 'Noto Sans SC') has = true; });
+                    if (!has) {
+                        const link = document.createElement('link');
+                        link.setAttribute('data-theme-font', '1');
+                        link.setAttribute('data-family', 'Noto Sans SC');
+                        __appendFontStylesheet(link, 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+                    }
+                } catch (e) { /* 加载失败忽略 */ }
+            };
+
+            function __ensureCnFallback(stack) {
+                if (!stack) return stack;
+                if (/Noto Sans SC|PingFang|YaHei|Microsoft Yahei|Heiti|Hanzi|CN|SC/i.test(stack)) return stack;
+                return String(stack).replace(/[, ]*sans-serif$/i, '') + ", 'Noto Sans SC', sans-serif";
+            }
+            // 应用外部主题变量
+            window.__applyThemeVars = function (themeData, isDark) {
+                document.querySelectorAll('[data-theme-var]').forEach(el => el.remove());
+                if (!themeData) return;
+                const layer = (isDark ? themeData.dark : themeData.light) || themeData.light || {};
+                const set = Object.assign({}, layer);
+
+                {
+                    let fv = set['font-sans'] || set['fontSans'] || set['fontFamily'] || set['font'];
+                    if (!fv && themeData.fonts) {
+                        const fo = themeData.fonts;
+                        fv = fo.sans || fo.fontSans || fo.fontFamily || fo.font;
+                    }
+                    if (fv) {
+                        fv = __ensureCnFallback(fv);
+                        set['font-sans'] = fv;
+                        set['font-family'] = fv;
+
+                        window.__loadGoogleFont(fv);
+                    }
+                }
+                const parts = [];
+                for (const [k, v] of Object.entries(set)) {
+                    if (!__THEME_ALLOWED.test(k)) continue;
+                    const sv = __safeCssValue(v);
+                    if (!sv) continue; // 非法值直接丢弃，防止 CSS 注入
+                    if (k === 'radius' && /^[, ]*0(px|rem)?[, ]*$/.test(sv)) continue;
+                    parts.push('--' + k + ':' + sv);
+                }
+                // 应用私有变量
+                const fg = __safeCssValue(set['foreground']) || 'var(--foreground)';
+                const card = __safeCssValue(set['card']) || 'var(--card)';
+                const primary = __safeCssValue(set['primary']) || 'var(--primary)';
+                parts.push('--menu-hover:color-mix(in oklab,' + fg + ' 10%,' + card + ')');
+                parts.push('--accent-soft:color-mix(in oklab,' + primary + ' 12%,' + card + ')');
+                if (!parts.length) return;
+                const style = document.createElement('style');
+                style.setAttribute('data-theme-var', '1');
+                style.textContent = ':root{' + parts.join(';') + '}';
+                document.head.appendChild(style);
+            };
+
+            let _tdRaw, _tdObj, _tdHas = false;
+            window.__getThemeData = function () {
+                let raw;
+                try { raw = localStorage.getItem('themeData'); } catch (e) { return null; }
+                if (_tdHas && raw === _tdRaw) return _tdObj;
+                _tdHas = true; _tdRaw = raw;
+                try { _tdObj = JSON.parse(raw || 'null'); } catch (e) { _tdObj = null; }
+                return _tdObj;
+            };
+
             let isDark;
             const savePreferences = localStorage.getItem('savePreferences');
             if (savePreferences === 'true') {
                 const savedTheme = localStorage.getItem('theme');
                 isDark = savedTheme === 'dark';
             } else {
-                const hour = new Date().getHours();
-                isDark = (hour >= 21 || hour < 6);
+
+                isDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
             }
             window.isDarkTheme = isDark;
             if (isDark) document.documentElement.classList.add('dark');
+
+            window.__PUBLISHED_THEME = "__NAV_PUBLISHED_THEME__";
+            try {
+                var _pt = window.__PUBLISHED_THEME;
+                if (typeof _pt === 'string') _pt = null; 
+                var _local = window.__getThemeData();
+                var _localUp = Number(localStorage.getItem('themeUpdatedAt') || 0);
+
+                var _own = localStorage.getItem('themePersonal') === '1';
+
+                var _keep = _own || (!!_local && _localUp > (_pt && _pt.updatedAt ? _pt.updatedAt : 0));
+                if (_pt && _pt.updatedAt && !_keep) {
+                    __lsSet('themePersonal', '0');
+                    if (_pt.data) {
+                        __lsSet('themeData', JSON.stringify(_pt.data));
+                        if (_pt.name) __lsSet('themeName', _pt.name);
+                        __lsSet('themeKind', _pt.kind || 'custom');
+                        if (_pt.source) __lsSet('themeSource', _pt.source);
+                        __lsSet('themeUpdatedAt', String(_pt.updatedAt));
+                        _local = _pt.data;
+                    } else {
+                        __lsDel('themeData');
+                        __lsDel('themeName');
+                        __lsDel('themeKind');
+                        __lsDel('themeSource');
+                        __lsSet('themeUpdatedAt', String(_pt.updatedAt));
+                        _local = null;
+                    }
+                }
+                if (_local) window.__applyThemeVars(_local, isDark);
+            } catch (e) {
+                if (window.__getThemeData()) window.__applyThemeVars(window.__getThemeData(), isDark);
+            }
         })();
     </script>
 </head>
 
-<body class="min-h-screen font-sans text-slate-800 dark:text-slate-100 selection:bg-emerald-200 dark:selection:bg-emerald-900 transition-colors duration-300">
+<body class="min-h-screen font-sans text-base-foreground transition-colors duration-300">
     
     <!-- 背景层 -->
-    <div class="fixed inset-0 -z-10 h-full w-full overflow-hidden bg-gray-100 dark:bg-[#0f172a]">
-        <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-[#0f172a] dark:to-[#1e293b]"></div>
-        <div class="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-emerald-300/30 dark:bg-indigo-600/20 rounded-full blur-[150px]"></div>
+    <div class="fixed inset-0 -z-10 h-full w-full overflow-hidden bg-base dark:bg-base">
+        <!-- <div class="absolute inset-0 bg-gradient-to-br from-[var(--background)] to-[var(--secondary)] dark:from-[var(--background)] dark:to-[var(--card)]"></div> -->
+        <div class="absolute top-[-5%] left-[-10%] w-[800px] h-[800px] bg-[color-mix(in_oklab,color-mix(in_oklab,var(--primary)_45%,var(--background))_30%,transparent)] dark:bg-[color-mix(in_oklab,color-mix(in_oklab,var(--primary)_25%,var(--background))_30%,transparent)] rounded-full blur-[120px]"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-300/30 dark:bg-purple-600/20 rounded-full blur-[120px]"></div>
     </div>
 
     <!-- 顶部固定导航 -->
     <div class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-        <div class="backdrop-blur-md bg-gray-100/80 dark:bg-[#0f172a]/85 border-b border-slate-200/40 dark:border-slate-700/40 shadow-sm [transform:translateZ(0)]">
+        <div class="backdrop-blur-md bg-[color-mix(in_oklab,var(--background)_80%,transparent)] dark:bg-[color-mix(in_oklab,var(--background)_85%,transparent)] border-b border-[color-mix(in_oklab,var(--border)_40%,transparent)] dark:border-[color-mix(in_oklab,var(--border)_40%,transparent)] shadow-sm [transform:translateZ(0)]">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16 gap-4">
                     
                     <!-- Logo -->
-                    <a class="flex items-center gap-2 flex-shrink-0 group cursor-pointer bg-white/50 dark:bg-transparent hover:bg-white dark:hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200/50 dark:border-transparent transition-all duration-300 hover:shadow-md hover:shadow-emerald-500/10 hover:-translate-y-0.5" href="#" onclick="location.reload()">
-                        <div class="w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-lg text-white shadow-lg shadow-emerald-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                    <a class="flex items-center gap-2 flex-shrink-0 group cursor-pointer bg-[color-mix(in_oklab,var(--card)_45%,transparent)] dark:bg-transparent hover:bg-[color-mix(in_oklab,var(--card)_75%,transparent)] dark:hover:bg-card px-3 py-1.5 rounded-xl border border-[color-mix(in_oklab,var(--border)_50%,transparent)] dark:border-transparent transition-all duration-300 hover:shadow-md hover:shadow-accent/10 hover:-translate-y-0.5" href="#" onclick="location.reload()">
+                        <div class="w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-accent to-teal-600 rounded-lg text-white shadow-lg shadow-accent/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
                             </svg>
                         </div>
-                        <span class="font-bold text-lg tracking-wide text-slate-700 dark:text-slate-100 hidden sm:block">我的导航</span>
+                        <span class="font-bold text-lg tracking-wide text-base-foreground hidden sm:block">我的导航</span>
                     </a>
 
                     <!-- Search Bar -->
                     <div class="flex-1 max-w-2xl mx-auto">
-                        <div class="relative flex items-center w-full h-10 rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/50 focus-within:shadow-lg focus-within:-translate-y-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-sm hover:shadow-lg transition-all duration-300">
+                        <div class="relative flex items-center w-full h-10 rounded-[var(--radius-xl)] focus-within:ring-2 focus-within:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] focus-within:shadow-lg focus-within:-translate-y-0.5 bg-card dark:bg-card border border-line dark:border-line-input shadow-sm hover:shadow-lg transition-all duration-300">
                             
                             <!-- Custom Search Engine Dropdown -->
                             <div class="relative h-full" id="search-engine-wrapper">
-                                <button id="search-engine-btn" class="h-full pl-3 pr-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-l-xl transition-colors outline-none w-auto md:min-w-[5.5rem]">
+                                <button id="search-engine-btn" class="h-full pl-3 pr-2 flex items-center gap-2 text-sm text-muted-foreground hover:text-accent hover:bg-muted dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] rounded-l-xl transition-colors outline-none w-auto md:min-w-[5.5rem]">
                                     <!-- 默认显示本站图标 -->
                                     <span id="current-engine-icon" class="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -242,23 +460,23 @@ const HTML_CONTENT = `
                                 </button>
                                 
                                 <!-- Dropdown Menu -->
-                                <div id="search-engine-menu" class="hidden absolute top-full left-0 mt-2 w-24 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 dropdown-enter">
+                                <div id="search-engine-menu" class="hidden absolute top-full left-0 mt-2 w-24 bg-card dark:bg-card rounded-xl shadow-xl border border-line dark:border-line overflow-hidden z-50 dropdown-enter">
                                     <div class="py-1" id="search-engine-list">
-                                        <div class="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">搜索引擎</div>
+                                        <div class="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">搜索引擎</div>
                                         <!-- JS 自动插入按钮 -->
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="h-4 w-px bg-slate-200 dark:bg-slate-600 mx-1"></div>
+                            <div class="h-4 w-px bg-line-input dark:bg-line-input mx-1"></div>
                             
-                            <input type="text" id="search-input" class="flex-1 bg-transparent border-none text-slate-700 dark:text-slate-200 text-sm focus:ring-0 placeholder-slate-400 h-full w-full outline-none px-2" placeholder="搜索">
+                            <input type="text" id="search-input" class="flex-1 bg-transparent border-none text-base-foreground dark:text-white text-sm focus:ring-0 placeholder:text-muted-foreground h-full w-full outline-none px-2" placeholder="搜索">
                             
-                            <button id="clear-search-button" class="hidden p-1.5 mr-1 rounded-full text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
+                            <button id="clear-search-button" class="hidden p-1.5 mr-1 rounded-full text-muted-foreground hover:text-red-500 hover:bg-muted dark:hover:bg-muted transition-all">
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                             </button>
                             
-                            <button id="search-button" class="h-full px-4 rounded-r-xl text-slate-500 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-700/50 transition-colors border-l border-transparent dark:border-slate-700/50 flex items-center justify-center">
+                            <button id="search-button" class="h-full px-4 rounded-r-xl text-muted-foreground hover:text-accent dark:hover:text-accent hover:bg-soft dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] transition-colors border-l border-transparent dark:border-[color-mix(in_oklab,var(--border)_50%,transparent)] flex items-center justify-center">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             </button>
                         </div>
@@ -267,40 +485,42 @@ const HTML_CONTENT = `
                     <!-- Profile / Settings -->
                     <div class="relative flex items-center gap-2">
                         <div id="profile-dropdown-wrapper" class="relative">
-                            <button id="profile-menu-toggle" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-all text-sm font-medium border border-transparent hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm">
-                                <div class="w-7 h-7 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center shadow-inner">
-                                     <svg class="w-4 h-4 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <button id="profile-menu-toggle" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-muted-foreground hover:bg-[color-mix(in_oklab,var(--card)_75%,transparent)] dark:hover:bg-muted transition-all text-sm font-medium border border-transparent hover:border-line dark:hover:border-line hover:shadow-sm">
+                                <div class="w-7 h-7 rounded-full bg-muted dark:bg-muted flex items-center justify-center shadow-inner">
+                                     <svg class="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 </div>
                                 <span id="menu-toggle" class="hidden md:inline">设置</span>
                             </button>
                             
                             <!-- Dropdown Menu -->
-                            <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-60 bg-white dark:bg-[#1e293b] rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden transform origin-top-right transition-all z-50 dropdown-enter">
+                            <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-60 bg-card rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden transform origin-top-right transition-all z-50 dropdown-enter">
                                 <div class="p-2 space-y-1">
                                     <!-- Edit Mode -->
-                                    <button id="edit-mode-btn" onclick="toggleEditMode()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700/50 hover:text-emerald-600 transition-colors flex items-center gap-3 font-medium">
+                                    <button id="edit-mode-btn" onclick="toggleEditMode()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] hover:text-accent dark:hover:text-accent transition-colors flex items-center gap-3 font-medium">
                                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         编辑模式
                                     </button>
 
                                     <!-- 一键检测 -->
-                                    <div id="check-all-menu" class="hidden border-t border-slate-100 dark:border-slate-700/50 my-1 pt-1">
-                                        <button id="check-all-btn" onclick="checkAllSites()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700/50 hover:text-emerald-600 transition-colors flex items-center justify-between gap-3 font-medium">
+                                    <div id="check-all-menu" class="hidden">
+                                        <div class="h-px bg-muted dark:bg-[color-mix(in_oklab,var(--muted)_50%,transparent)] mx-1 my-1"></div>
+                                        <button id="check-all-btn" onclick="checkAllSites()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] hover:text-accent dark:hover:text-accent transition-colors flex items-center justify-between gap-3 font-medium">
                                             <span class="flex items-center gap-3">
                                                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                                 一键检测
                                             </span>
-                                            <span id="check-all-status" class="text-xs font-normal text-slate-400 dark:text-slate-500"></span>
+                                            <span id="check-all-status" class="text-xs font-normal text-muted-foreground dark:text-muted-foreground"></span>
                                         </button>
                                     </div>
 
                                     <!-- 导入导出 (仅登录显示) -->
-                                    <div id="data-tools-menu" class="hidden border-t border-slate-100 dark:border-slate-700/50 my-1 pt-1">
-                                         <button onclick="exportData()" class="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-700/50 hover:text-amber-600 transition-colors flex items-center gap-3">
+                                    <div id="data-tools-menu" class="hidden">
+                                         <div class="h-px bg-muted dark:bg-[color-mix(in_oklab,var(--muted)_50%,transparent)] mx-1 my-1"></div>
+                                         <button onclick="exportData()" class="w-full text-left px-3 py-2 rounded-lg text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] hover:text-amber-600 dark:hover:text-amber-400 transition-colors flex items-center gap-3">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                             导出配置
                                         </button>
-                                        <button onclick="importData()" class="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-green-50 dark:hover:bg-slate-700/50 hover:text-green-600 transition-colors flex items-center gap-3">
+                                        <button onclick="importData()" class="w-full text-left px-3 py-2 rounded-lg text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] hover:text-green-600 dark:hover:text-green-400 transition-colors flex items-center gap-3">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4 4m4-4v12"></path></svg>
                                             导入配置
                                         </button>
@@ -308,12 +528,19 @@ const HTML_CONTENT = `
                                         <input type="file" id="import-file-input" accept=".json,.html,.htm" class="hidden">
                                     </div>
                                     
-                                    <div class="h-px bg-slate-100 dark:bg-slate-700/50 mx-1 my-1"></div>
+                                    <div class="h-px bg-muted dark:bg-[color-mix(in_oklab,var(--muted)_50%,transparent)] mx-1 my-1"></div>
+
+                                    <!-- 主题皮肤入口：访客也可用，仅本地生效；管理员的改动才同步 KV -->
+                                    <button id="theme-menu-btn" onclick="openThemeDialog()" class="flex w-full text-left px-3 py-2 rounded-lg text-sm text-muted-foreground dark:text-muted-foreground hover:bg-[var(--menu-hover)] hover:text-accent dark:hover:text-accent transition-colors items-center gap-3">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a1 1 0 0 1 1 1v.5a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm8 9a1 1 0 0 1-1 1h-.5a1 1 0 0 1 0-2H19a1 1 0 0 1 1 1zM5 12a1 1 0 0 1-1 1h-.5a1 1 0 0 1 0-2H4a1 1 0 0 1 1 1z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M12 2v2M12 20v2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+                                        主题皮肤
+                                        <svg class="w-3.5 h-3.5 ml-auto text-muted-foreground" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                    </button>
 
                                     <!-- 【新增】APP 布局切换 -->
-                                    <div class="px-3 py-2.5 flex items-center justify-between text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/30 rounded-lg group">
+                                    <div class="px-3 py-2.5 flex items-center justify-between text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] rounded-lg group">
                                         <span class="flex items-center gap-3">
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <svg class="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground dark:text-muted-foreground dark:group-hover:text-base-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
                                                 <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
                                             </svg>
@@ -321,32 +548,32 @@ const HTML_CONTENT = `
                                         </span>
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" id="layout-switch-checkbox" onchange="toggleAppLayout()" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                                            <div class="w-9 h-5 bg-[color-mix(in_oklab,var(--foreground)_35%,var(--card))] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] peer-checked:bg-accent"></div>
                                         </label>
                                     </div>
                                     
-                                    <div class="px-3 py-2.5 flex items-center justify-between text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/30 rounded-lg group">
+                                    <div class="px-3 py-2.5 flex items-center justify-between text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] rounded-lg group">
                                         <span class="flex items-center gap-3">
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                                            <svg class="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground dark:text-muted-foreground dark:group-hover:text-base-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                                             深色模式
                                         </span>
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" id="theme-switch-checkbox" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                                            <div class="w-9 h-5 bg-[color-mix(in_oklab,var(--foreground)_35%,var(--card))] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] peer-checked:bg-accent"></div>
                                         </label>
                                     </div>
-                                    <div class="px-3 py-2.5 flex items-center justify-between text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/30 rounded-lg group">
+                                    <div class="px-3 py-2.5 flex items-center justify-between text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] rounded-lg group">
                                         <span class="flex items-center gap-3">
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                            <svg class="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground dark:text-muted-foreground dark:group-hover:text-base-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                                             记住设置
                                         </span>
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" id="save-preference-checkbox" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                                            <div class="w-9 h-5 bg-[color-mix(in_oklab,var(--foreground)_35%,var(--card))] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-[color-mix(in_oklab,var(--muted-foreground)_40%,var(--card))] peer-checked:bg-accent"></div>
                                         </label>
                                     </div>
-                                    <div class="h-px bg-slate-100 dark:bg-slate-700/50 mx-1 my-1"></div>
-                                    <button id="login-Btn" onclick="toggleLogin()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors flex items-center gap-3 font-medium">
+                                    <div class="h-px bg-muted dark:bg-[color-mix(in_oklab,var(--muted)_50%,transparent)] mx-1 my-1"></div>
+                                    <button id="login-Btn" onclick="toggleLogin()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-base-foreground dark:text-base-foreground hover:bg-[var(--menu-hover)] hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-3 font-medium">
                                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                                         登录 / 退出
                                     </button>
@@ -368,8 +595,8 @@ const HTML_CONTENT = `
     <main class="pt-36 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-screen">
         <!-- 添加分类按钮 (仅编辑模式显示) -->
         <div id="add-category-container" class="hidden mt-12 mb-8">
-            <button onclick="addCategory()" class="w-full py-4 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-500 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-center gap-2 group">
-                <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/30 flex items-center justify-center transition-colors">
+            <button onclick="addCategory()" class="w-full py-4 rounded-[var(--radius-2xl)] border-2 border-dashed border-line dark:border-line text-muted-foreground hover:border-accent hover:text-accent dark:hover:border-accent dark:hover:text-accent hover:bg-[color-mix(in_oklab,var(--accent)_50%,transparent)] dark:hover:bg-[color-mix(in_oklab,var(--secondary)_50%,transparent)] transition-all flex items-center justify-center gap-2 group">
+                <div class="w-8 h-8 rounded-full bg-muted dark:bg-muted group-hover:bg-soft dark:group-hover:bg-soft flex items-center justify-center transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 </div>
                 <span class="font-medium text-lg">新建分类</span>
@@ -381,7 +608,7 @@ const HTML_CONTENT = `
 
         <!-- 返回顶部按钮独立放置 -->
         <div class="fixed bottom-8 right-8 z-50">
-            <button id="back-to-top-btn" onclick="scrollToTop()" class="hidden w-12 h-12 rounded-2xl bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-lg backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 hover:bg-slate-50 dark:hover:bg-slate-700 has-tooltip group" data-tooltip="返回顶部">
+            <button id="back-to-top-btn" onclick="scrollToTop()" class="hidden w-12 h-12 rounded-2xl bg-[color-mix(in_oklab,var(--card)_90%,var(--background))] dark:bg-[color-mix(in_oklab,var(--card)_90%,var(--background))] text-muted-foreground border border-line dark:border-line shadow-lg backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 hover:bg-muted dark:hover:bg-muted has-tooltip group" data-tooltip="返回顶部">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
             </button>
         </div>
@@ -389,103 +616,146 @@ const HTML_CONTENT = `
     </main>
 
     <!-- 模态框：添加/编辑链接 -->
-    <div id="dialog-overlay" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
-        <div id="dialog-box" class="bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all duration-300 border border-slate-100 dark:border-slate-700 dialog-scale-hidden">
-            <h3 class="text-xl font-bold mb-5 text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <span class="w-1 h-6 bg-emerald-500 rounded-full"></span>
+    <div id="dialog-overlay" class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+        <div id="dialog-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-md p-6 transform transition-all duration-300 border border-line dark:border-line dialog-scale-hidden">
+            <h3 class="text-xl font-bold mb-5 text-base-foreground flex items-center gap-2">
+                <span class="w-1 h-6 bg-accent rounded-full"></span>
                 编辑信息
             </h3>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">名称 <span class="text-red-500">*</span></label>
-                    <input type="text" id="name-input" class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all dark:text-white" placeholder="网站名称">
+                    <label class="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">名称 <span class="text-red-500">*</span></label>
+                    <input type="text" id="name-input" class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] focus:border-accent outline-none transition-all dark:text-white" placeholder="网站名称">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">地址 <span class="text-red-500">*</span></label>
-                    <input type="text" id="url-input" class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all dark:text-white" placeholder="https://...">
+                    <label class="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">地址 <span class="text-red-500">*</span></label>
+                    <input type="text" id="url-input" class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] focus:border-accent outline-none transition-all dark:text-white" placeholder="https://...">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">描述</label>
-                    <input type="text" id="tips-input" class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all dark:text-white" placeholder="简短的描述...">
+                    <label class="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">描述</label>
+                    <input type="text" id="tips-input" class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] focus:border-accent outline-none transition-all dark:text-white" placeholder="简短的描述...">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">图标 URL</label>
-                    <input type="text" id="icon-input" class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all dark:text-white" placeholder="留空自动获取">
+                    <label class="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">图标 URL</label>
+                    <input type="text" id="icon-input" class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] focus:border-accent outline-none transition-all dark:text-white" placeholder="留空自动获取">
                 </div>
                 
                 <!-- Custom Category Dropdown -->
                 <div class="relative z-20" id="category-select-wrapper">
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">分类</label>
+                    <label class="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">分类</label>
                     <input type="hidden" id="category-select-value">
-                    <button id="category-select-btn" class="w-full px-4 py-2.5 text-left rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all text-slate-700 dark:text-white flex items-center justify-between">
+                    <button id="category-select-btn" class="w-full px-4 py-2.5 text-left rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] outline-none transition-all text-base-foreground dark:text-white flex items-center justify-between">
                         <span id="category-select-text">请选择分类</span>
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                     <!-- Dropdown List -->
-                    <div id="category-select-menu" class="hidden absolute top-full left-0 mt-2 w-full max-h-48 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-50 custom-scrollbar">
+                    <div id="category-select-menu" class="hidden absolute top-full left-0 mt-2 w-full max-h-48 overflow-y-auto bg-card dark:bg-card rounded-xl shadow-xl border border-line dark:border-line z-50 custom-scrollbar">
                         <!-- Items populated by JS -->
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2 pt-2">
-                    <input type="checkbox" id="private-checkbox" class="w-5 h-5 text-emerald-500 rounded focus:ring-emerald-500 border-gray-300 bg-gray-100">
-                    <label for="private-checkbox" class="text-sm text-slate-600 dark:text-slate-300 font-medium">设为私密链接 (仅登录可见)</label>
+                    <input type="checkbox" id="private-checkbox" class="w-5 h-5 text-accent rounded focus:ring-ring border-line-input bg-base">
+                    <label for="private-checkbox" class="text-sm text-muted-foreground font-medium">设为私密链接 (仅登录可见)</label>
                 </div>
             </div>
             <div class="flex justify-end gap-3 mt-8">
-                <button id="dialog-cancel-btn" class="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors">取消</button>
-                <button id="dialog-confirm-btn" class="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all hover:translate-y-[-1px]">确定</button>
+                <button id="dialog-cancel-btn" class="px-5 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium text-muted-foreground hover:bg-muted dark:text-muted-foreground dark:hover:bg-muted transition-colors">取消</button>
+                <button id="dialog-confirm-btn" class="px-5 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium text-accent-foreground bg-accent hover:bg-accent shadow-lg shadow-accent/25 transition-all hover:translate-y-[-1px]">确定</button>
             </div>
         </div>
     </div>
 
     <!-- 密码弹窗 -->
-    <div id="password-dialog-overlay" class="fixed inset-0 z-[70] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
-        <div id="password-dialog-box" class="bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-8 w-full max-w-sm border border-slate-100 dark:border-slate-700 text-center transform transition-all duration-300 dialog-scale-hidden">
-            <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-500">
+    <div id="password-dialog-overlay" class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+        <div id="password-dialog-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl p-8 w-full max-w-sm border border-line dark:border-line text-center transform transition-all duration-300 dialog-scale-hidden">
+            <div class="w-16 h-16 bg-soft dark:bg-soft rounded-full flex items-center justify-center mx-auto mb-4 text-accent">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
             </div>
-            <h3 class="text-xl font-bold mb-2 text-slate-800 dark:text-white">身份验证</h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">请输入管理员密码以继续操作</p>
-            <input type="password" id="password-input" placeholder="访问密码" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none mb-6 dark:text-white text-center tracking-widest text-lg transition-all">
+            <h3 class="text-xl font-bold mb-2 text-base-foreground">身份验证</h3>
+            <p class="text-sm text-muted-foreground mb-6">请输入管理员密码以继续操作</p>
+            <input type="password" id="password-input" placeholder="访问密码" class="w-full px-4 py-3 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-ring focus:border-transparent outline-none mb-6 dark:text-white text-center tracking-widest text-lg transition-all">
             <div class="flex gap-3">
-                <button id="password-cancel-btn" class="flex-1 py-2.5 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 font-medium transition-colors">取消</button>
-                <button id="password-confirm-btn" class="flex-1 py-2.5 rounded-xl text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 font-medium transition-colors">确认登录</button>
+                <button id="password-cancel-btn" class="flex-1 py-2.5 rounded-[var(--radius-xl)] text-muted-foreground bg-muted hover:bg-secondary dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted font-medium transition-colors">取消</button>
+                <button id="password-confirm-btn" class="flex-1 py-2.5 rounded-[var(--radius-xl)] text-accent-foreground bg-accent hover:bg-accent shadow-lg shadow-accent/25 font-medium transition-colors">确认登录</button>
             </div>
         </div>
     </div>
 
     <!-- 自定义 Alert -->
-    <div id="custom-alert-overlay" class="fixed inset-0 z-[110] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
-        <div id="custom-alert-box" class="bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-slate-100 dark:border-slate-700 transform transition-all duration-300 dialog-scale-hidden">
-            <h3 id="custom-alert-title" class="text-lg font-bold mb-2 text-slate-800 dark:text-white">提示</h3>
-            <p id="custom-alert-content" class="text-slate-600 dark:text-slate-300 mb-6 text-sm leading-relaxed"></p>
+    <div id="custom-alert-overlay" class="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+        <div id="custom-alert-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl p-6 max-w-sm w-full border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
+            <h3 id="custom-alert-title" class="text-lg font-bold mb-2 text-base-foreground">提示</h3>
+            <p id="custom-alert-content" class="text-muted-foreground mb-6 text-sm leading-relaxed"></p>
             <div class="flex justify-end">
-                <button id="custom-alert-confirm" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-emerald-500/20">我知道了</button>
+                <button id="custom-alert-confirm" class="px-5 py-2 bg-accent hover:bg-accent text-accent-foreground rounded-[var(--radius-xl)] text-sm font-medium transition-colors shadow-lg shadow-accent/20">我知道了</button>
             </div>
         </div>
     </div>
 
     <!-- 自定义 Confirm -->
-    <div id="custom-confirm-overlay" class="fixed inset-0 z-[80] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
-        <div id="custom-confirm-box" class="bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-slate-100 dark:border-slate-700 transform transition-all duration-300 dialog-scale-hidden">
-            <h3 class="text-lg font-bold mb-3 text-slate-800 dark:text-white">确认操作</h3>
-            <p id="custom-confirm-message" class="text-slate-600 dark:text-slate-300 mb-6 text-sm"></p>
+    <div id="custom-confirm-overlay" class="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+        <div id="custom-confirm-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl p-6 max-w-sm w-full border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
+            <h3 class="text-lg font-bold mb-3 text-base-foreground">确认操作</h3>
+            <p id="custom-confirm-message" class="text-muted-foreground mb-6 text-sm"></p>
             <div class="flex justify-end gap-3">
-                <button id="custom-confirm-cancel" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl dark:text-slate-400 dark:hover:bg-slate-700 transition-colors font-medium">取消</button>
-                <button id="custom-confirm-ok" class="px-4 py-2 text-sm text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors font-medium">确定</button>
+                <button id="custom-confirm-cancel" class="px-4 py-2 text-sm text-muted-foreground hover:bg-muted rounded-[var(--radius-xl)] dark:text-muted-foreground dark:hover:bg-muted transition-colors font-medium">取消</button>
+                <button id="custom-confirm-ok" class="px-4 py-2 text-sm text-accent-foreground bg-accent hover:bg-accent rounded-[var(--radius-xl)] shadow-lg shadow-accent/20 transition-colors font-medium">确定</button>
             </div>
         </div>
     </div>
 
     <!-- 分类输入弹窗 -->
-    <div id="category-dialog" class="fixed inset-0 z-[65] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
-        <div id="category-dialog-box" class="bg-white dark:bg-[#1e293b] rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-slate-100 dark:border-slate-700 transform transition-all duration-300 dialog-scale-hidden">
-            <h3 id="category-dialog-title" class="text-lg font-bold mb-4 text-slate-800 dark:text-white">分类名称</h3>
-            <input type="text" id="category-name-input" class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none mb-6 dark:text-white transition-all" placeholder="输入分类名称">
+    <div id="category-dialog" class="fixed inset-0 z-[65] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+        <div id="category-dialog-box" class="bg-card rounded-[var(--radius-2xl)] p-6 w-full max-w-sm shadow-2xl border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
+            <h3 id="category-dialog-title" class="text-lg font-bold mb-4 text-base-foreground">分类名称</h3>
+            <input type="text" id="category-name-input" class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-ring outline-none mb-6 dark:text-white transition-all" placeholder="输入分类名称">
             <div class="flex justify-end gap-3">
-                <button id="category-cancel-btn" class="px-4 py-2 text-sm rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 font-medium">取消</button>
-                <button id="category-confirm-btn" class="px-4 py-2 text-sm rounded-xl text-white bg-emerald-500 hover:bg-emerald-600 shadow-md font-medium">确定</button>
+                <button id="category-cancel-btn" class="px-4 py-2 text-sm rounded-[var(--radius-xl)] text-muted-foreground bg-muted hover:bg-secondary dark:bg-muted dark:text-muted-foreground font-medium">取消</button>
+                <button id="category-confirm-btn" class="px-4 py-2 text-sm rounded-[var(--radius-xl)] text-accent-foreground bg-accent hover:bg-accent shadow-md font-medium">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主题设置弹窗 -->
+    <div id="theme-dialog-overlay" class="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+        <div id="theme-dialog-box" class="bg-card dark:bg-card rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-2xl h-[90vh] max-h-[720px] flex flex-col border border-line transition-all duration-300 transform">
+            <!-- 头部：标题 + 关闭 -->
+            <div class="p-6 pb-4 flex items-center justify-between border-b border-[color-mix(in_oklab,var(--border)_40%,transparent)] shrink-0">
+                <h3 class="text-lg font-bold text-base-foreground flex items-center gap-2">
+                    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a1 1 0 0 1 1 1v.5a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm8 9a1 1 0 0 1-1 1h-.5a1 1 0 0 1 0-2H19a1 1 0 0 1 1 1zM5 12a1 1 0 0 1-1 1h-.5a1 1 0 0 1 0-2H4a1 1 0 0 1 1 1z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+                    主题皮肤
+                </h3>
+                <button id="theme-dialog-close" onclick="closeThemeDialog()" aria-label="关闭"
+                    class="p-2 rounded-full text-muted-foreground hover:bg-muted dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 pt-4">
+                <div id="theme-status-bar" class="mb-5"></div>
+
+                <div class="mb-2 flex items-center justify-between">
+                    <h4 class="text-sm font-semibold text-base-foreground">推荐主题</h4>
+                    <span id="theme-kind-toggle" class="text-xs text-muted-foreground"></span>
+                </div>
+                <p id="theme-guide" class="text-xs text-muted-foreground mb-2"></p>
+                <div id="theme-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[48vh] overflow-y-auto px-1 py-1 no-scrollbar"></div>
+
+                <div id="theme-custom-details" class="mt-6 border border-[color-mix(in_oklab,var(--border)_40%,transparent)] rounded-[var(--radius-xl)]">
+                    <div class="px-4 py-3 text-sm font-medium text-base-foreground">
+                        自定义主题（粘贴 tweakcn 链接 / ID）
+                    </div>
+                    <div class="px-4 pb-4">
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="theme-input" placeholder="粘贴主题ID 或完整链接 themes/xxx"
+                                class="flex-1 min-w-0 px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] outline-none transition-all text-base-foreground dark:text-white">
+                            <button onclick="applyCustomTheme()" class="shrink-0 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium text-accent-foreground bg-accent hover:bg-accent shadow-lg shadow-accent/20 transition-all hover:translate-y-[-1px]">应用</button>
+                        </div>
+                        <p id="theme-status" class="text-xs mb-2 min-h-[1rem] text-muted-foreground"></p>
+                        <a href="https://tweakcn.com/community" target="_blank" rel="noopener" class="text-xs text-accent hover:underline inline-flex items-center gap-1">更多主题：tweakcn.com/community ↗</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -495,12 +765,12 @@ const HTML_CONTENT = `
             <div class="absolute inset-0 w-full h-full rounded-full loading-spinner-track"></div>
             <div class="absolute inset-0 w-full h-full rounded-full loading-spinner-arc animate-spin"></div>
         </div>
-        <p class="mt-4 text-emerald-600 dark:text-emerald-400 font-medium animate-pulse tracking-wide">加载中...</p>
+        <p class="mt-4 text-accent font-medium animate-pulse tracking-wide">加载中...</p>
     </div>
 
     <!-- Tooltip Container -->
     <div id="custom-tooltip" class="fixed hidden pointer-events-none max-w-xs whitespace-pre-wrap border leading-relaxed tracking-wide backdrop-blur-sm rounded-xl shadow-glass px-4 py-2 text-sm transition-opacity duration-150
-        bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border-slate-200/50 dark:border-slate-700/50">
+        bg-card dark:bg-card text-base-foreground dark:text-base-foreground border-[color-mix(in_oklab,var(--border)_50%,transparent)] dark:border-[color-mix(in_oklab,var(--border)_50%,transparent)]">
     </div>
 
     <script>
@@ -639,7 +909,6 @@ const HTML_CONTENT = `
         function updateProgress() {
             if (!statusEl) return;
             const now = Date.now();
-            // 限制进度文本每 100ms 最多刷新一次，或者全部完成时强制刷新
             if (now - lastProgressUpdate > 100 || doneCount === total) {
                 statusEl.textContent = doneCount + '/' + total;
                 lastProgressUpdate = now;
@@ -725,7 +994,7 @@ const HTML_CONTENT = `
             const icon = searchEngineIcons[key];
             
             const btn = document.createElement('button');
-            btn.className = "w-full text-left px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700 hover:text-emerald-600 transition-colors flex items-center gap-3";
+            btn.className = "w-full text-left px-3 py-2.5 text-sm text-base-foreground dark:text-base-foreground hover:bg-soft dark:hover:bg-muted hover:text-accent transition-colors flex items-center gap-3";
             btn.onclick = () => selectSearchEngine(key, label);
             
             btn.innerHTML = \`\${icon}<span>\${label}</span>\`;
@@ -757,6 +1026,7 @@ const HTML_CONTENT = `
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState === 'visible' && isLoggedIn) {
                 await validateToken();
+                pullThemeFromKv(); 
             }
         });
     });
@@ -770,6 +1040,7 @@ const HTML_CONTENT = `
             isEditMode = false;
         }
         await loadLinks();
+        pullThemeFromKv();
     }
 
     function initializeUIComponents() {
@@ -804,6 +1075,17 @@ const HTML_CONTENT = `
         
         const savedPref = localStorage.getItem('savePreferences') === 'true';
         elements.savePrefCheckbox.checked = savedPref;
+
+        if (window.matchMedia) {
+            const darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
+            const onSystemDarkChange = (e) => {
+                if (localStorage.getItem('savePreferences') === 'true') return;
+                window.isDarkTheme = e.matches;
+                applyTheme(e.matches);
+            };
+            if (darkMedia.addEventListener) darkMedia.addEventListener('change', onSystemDarkChange);
+            else if (darkMedia.addListener) darkMedia.addListener(onSystemDarkChange); // 旧浏览器兼容
+        }
 
         currentEngine = (savedPref && localStorage.getItem('searchEngine')) || 'site';
         updateSearchEngineUI(currentEngine);
@@ -883,7 +1165,6 @@ const HTML_CONTENT = `
             elements.searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') elements.searchButton.click();
             });
-            // 实时搜索防抖：避免每次输入都触发全量重渲染
             let searchDebounceTimer = null;
             elements.searchInput.addEventListener('input', (e) => {
                 if (e.target.value) {
@@ -895,14 +1176,12 @@ const HTML_CONTENT = `
                 searchDebounceTimer = setTimeout(() => {
                     const q = e.target.value.trim();
                     if (!q) {
-                        // 清空关键词时恢复全量展示（不清输入框）
                         renderCategorySections({ renderButtons: true });
                         return;
                     }
                     if (currentEngine === 'site') {
                         elements.clearSearchButton.classList.remove('hidden');
                         const filtered = getFilteredCategoriesByKeyword(q);
-                        // 实时搜索直接渲染，避免每次无结果都弹 alert，干扰连续输入
                         renderCategorySections({ renderButtons: true, searchMode: true, filteredCategories: filtered });
                     }
                 }, 220);
@@ -1138,41 +1417,41 @@ const HTML_CONTENT = `
 
             // 标题区域
             const titleContainer = document.createElement('div');
-            titleContainer.className = 'flex items-center gap-3 mb-5 pb-2 border-b border-slate-200/60 dark:border-slate-700/60';
+            titleContainer.className = 'flex items-center gap-3 mb-5 pb-2 border-b border-[color-mix(in_oklab,var(--border)_60%,transparent)]';
             
             const title = document.createElement('h2');
-            title.className = 'text-lg font-bold text-slate-700 dark:text-slate-100 flex items-center gap-2';
+            title.className = 'text-lg font-bold text-base-foreground flex items-center gap-2';
             const badge = document.createElement('span');
-            badge.className = 'w-1.5 h-5 bg-emerald-500 rounded-full inline-block shadow-sm';
+            badge.className = 'w-1.5 h-5 bg-accent rounded-full inline-block shadow-sm';
             title.append(badge, ' ' + category);
             titleContainer.appendChild(title);
 
             // 编辑模式下的标题栏操作
             if (isEditMode) {
                 const controls = document.createElement('div');
-                controls.className = 'flex items-center gap-1 ml-auto bg-slate-300/50 dark:bg-slate-800/50 p-1 rounded-xl border border-slate-300/50 dark:border-slate-700/50 backdrop-blur-sm';
+                controls.className = 'flex items-center gap-1 ml-auto bg-[color-mix(in_oklab,var(--muted)_70%,transparent)] dark:bg-[color-mix(in_oklab,var(--muted)_25%,transparent)] p-1 rounded-xl border border-[color-mix(in_oklab,var(--border)_60%,transparent)] dark:border-[color-mix(in_oklab,var(--border)_60%,transparent)] backdrop-blur-sm';
                 const btnBase = "w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-105 active:scale-95";
                 
                 controls.innerHTML = \`
                     <!-- 编辑名称 -->
-                    <button class="\${btnBase} text-slate-500 hover:text-blue-600 hover:bg-blue-100 dark:text-slate-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 has-tooltip" data-tooltip="重命名" data-action="edit" data-category="\${escAttr(category)}">
+                    <button class="\${btnBase} text-muted-foreground hover:text-blue-600 hover:bg-blue-100 dark:text-muted-foreground dark:hover:bg-blue-900/30 dark:hover:text-blue-400 has-tooltip" data-tooltip="重命名" data-action="edit" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     </button>
                     
-                    <div class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-0.5"></div>
+                    <div class="w-px h-4 bg-line dark:bg-line-input mx-0.5"></div>
 
                     <!-- 排序组 -->
-                    <button class="\${btnBase} text-slate-500 hover:text-emerald-600 hover:bg-emerald-100 dark:text-slate-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 has-tooltip" data-tooltip="上移" data-action="move" data-dir="-1" data-category="\${escAttr(category)}">
+                    <button class="\${btnBase} text-muted-foreground hover:text-accent hover:bg-soft dark:text-muted-foreground dark:hover:bg-soft dark:hover:text-accent has-tooltip" data-tooltip="上移" data-action="move" data-dir="-1" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
                     </button>
-                    <button class="\${btnBase} text-slate-500 hover:text-emerald-600 hover:bg-emerald-100 dark:text-slate-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 has-tooltip" data-tooltip="下移" data-action="move" data-dir="1" data-category="\${escAttr(category)}">
+                    <button class="\${btnBase} text-muted-foreground hover:text-accent hover:bg-soft dark:text-muted-foreground dark:hover:bg-soft dark:hover:text-accent has-tooltip" data-tooltip="下移" data-action="move" data-dir="1" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
-                    <button class="\${btnBase} text-slate-500 hover:text-amber-600 hover:bg-amber-100 dark:text-slate-400 dark:hover:bg-amber-900/30 dark:hover:text-amber-400 has-tooltip" data-tooltip="置顶" data-action="pin" data-category="\${escAttr(category)}">
+                    <button class="\${btnBase} text-muted-foreground hover:text-amber-600 hover:bg-amber-100 dark:text-muted-foreground dark:hover:bg-amber-900/30 dark:hover:text-amber-400 has-tooltip" data-tooltip="置顶" data-action="pin" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3h14M18 13l-6-6l-6 6M12 7v14"></path></svg>
                     </button>
 
-                    <div class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-0.5"></div>
+                    <div class="w-px h-4 bg-line dark:bg-line-input mx-0.5"></div>
 
                     <!-- 隐藏开关 -->
                     <div class="flex items-center justify-center w-8 h-8 has-tooltip cursor-pointer" data-tooltip="\${isHidden ? '显示分类' : '隐藏分类'}">
@@ -1180,14 +1459,14 @@ const HTML_CONTENT = `
                             <!-- 下面这一行增加了 DOM 属性更新逻辑 -->
                             <input type="checkbox" data-action="toggleHidden" data-category="\${escAttr(category)}" \${isHidden ? 'checked' : ''} 
                                 class="sr-only peer">
-                            <div class="w-3.5 h-3.5 rounded-full border-2 border-slate-400 peer-focus:outline-none peer dark:border-slate-500 peer-checked:bg-slate-500 peer-checked:border-slate-500 transition-colors"></div>
+                            <div class="w-3.5 h-3.5 rounded-full border-2 border-line peer-focus:outline-none peer dark:border-line-input peer-checked:bg-accent peer-checked:border-accent transition-colors"></div>
                         </label>
                     </div>
 
-                    <div class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-0.5"></div>
+                    <div class="w-px h-4 bg-line dark:bg-line-input mx-0.5"></div>
 
                     <!-- 删除 -->
-                    <button class="\${btnBase} text-slate-400 hover:text-red-600 hover:bg-red-100 dark:text-slate-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 has-tooltip" data-tooltip="删除分类" data-action="delete" data-category="\${escAttr(category)}">
+                    <button class="\${btnBase} text-muted-foreground hover:text-red-600 hover:bg-red-100 dark:text-muted-foreground dark:hover:bg-red-900/30 dark:hover:text-red-400 has-tooltip" data-tooltip="删除分类" data-action="delete" data-category="\${escAttr(category)}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 \`;
@@ -1221,12 +1500,12 @@ const HTML_CONTENT = `
                 const addCardPlaceholder = document.createElement('div');
                 const sizeClasses = isAppLayout 
                     ? 'w-16 h-16 rounded-[1.2rem] mx-auto' 
-                    : 'min-h-[100px] p-4 rounded-2xl w-full';
+                    : 'min-h-[100px] p-4 rounded-[var(--radius-2xl)] w-full';
                 
-                addCardPlaceholder.className = \`add-card-placeholder group flex flex-col h-full w-full \${sizeClasses} rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-all cursor-pointer flex items-center justify-center\`;
+                addCardPlaceholder.className = \`add-card-placeholder group flex flex-col h-full w-full \${sizeClasses} rounded-[var(--radius-2xl)] border-2 border-dashed border-line dark:border-line hover:border-accent dark:hover:border-accent hover:bg-[color-mix(in_oklab,var(--accent)_50%,transparent)] dark:hover:bg-soft transition-all cursor-pointer flex items-center justify-center\`;
                 addCardPlaceholder.innerHTML = \`
-                    <div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/30 flex items-center justify-center transition-colors pointer-events-none">
-                        <svg class="w-6 h-6 text-slate-400 group-hover:text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <div class="w-10 h-10 rounded-full bg-muted dark:bg-muted group-hover:bg-soft dark:group-hover:bg-soft flex items-center justify-center transition-colors pointer-events-none">
+                        <svg class="w-6 h-6 text-muted-foreground group-hover:text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </div>
                 \`;
                 
@@ -1282,8 +1561,8 @@ const HTML_CONTENT = `
 
         visibleCategories.forEach(cat => {
             const btn = document.createElement('button');
-            btn.className = 'category-button whitespace-nowrap px-4 py-1.5 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-600 transition-all active:scale-95 shadow-sm scroll-snap-align-start';
-            btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300', 'hover:bg-emerald-50', 'hover:text-emerald-600', 'dark:hover:bg-slate-700', 'hover:border-emerald-300', 'dark:hover:border-emerald-500/50');
+            btn.className = 'category-button whitespace-nowrap px-4 py-1.5 text-xs font-medium rounded-[var(--radius-xl)] border border-line dark:border-line-input transition-all active:scale-95 shadow-sm scroll-snap-align-start';
+            btn.classList.add('bg-muted', 'dark:bg-muted', 'text-muted-foreground', 'dark:text-muted-foreground', 'hover:bg-[var(--menu-hover)]', 'dark:hover:bg-[var(--menu-hover)]', 'hover:text-accent', 'dark:hover:text-accent', 'hover:border-accent', 'dark:hover:border-accent');
             
             btn.textContent = cat;
             btn.dataset.target = cat;
@@ -1426,12 +1705,12 @@ const HTML_CONTENT = `
         const buttons = document.querySelectorAll('.category-button');
         buttons.forEach(btn => {
             if (sectionId(btn.dataset.target) === id) {
-                btn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300', 'hover:bg-emerald-50', 'hover:text-emerald-600', 'dark:hover:bg-slate-700');
-                btn.classList.add('bg-emerald-500', 'text-white', 'shadow-md', 'dark:bg-emerald-600');
+                btn.classList.remove('bg-muted', 'dark:bg-muted', 'text-muted-foreground', 'dark:text-muted-foreground', 'hover:bg-[var(--menu-hover)]', 'hover:text-accent', 'dark:hover:text-accent');
+                btn.classList.add('bg-accent', 'text-accent-foreground', 'shadow-md', 'dark:bg-accent');
                 btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             } else {
-                btn.classList.remove('bg-emerald-500', 'text-white', 'shadow-md', 'dark:bg-emerald-600');
-                btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300', 'hover:bg-emerald-50', 'hover:text-emerald-600', 'dark:hover:bg-slate-700');
+                btn.classList.remove('bg-accent', 'text-accent-foreground', 'shadow-md', 'dark:bg-accent');
+                btn.classList.add('bg-muted', 'dark:bg-muted', 'text-muted-foreground', 'dark:text-muted-foreground', 'hover:bg-[var(--menu-hover)]', 'hover:text-accent', 'dark:hover:text-accent');
             }
         });
     }
@@ -1480,7 +1759,7 @@ const HTML_CONTENT = `
             '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> 登录';
         
         if(isLoggedIn) {
-            loginBtn.classList.replace('text-red-500', 'text-slate-700');
+            loginBtn.classList.replace('text-red-500', 'text-base-foreground');
             if(dataToolsMenu) dataToolsMenu.classList.remove('hidden');
             if(checkAllMenu) checkAllMenu.classList.remove('hidden');
         } else {
@@ -1495,7 +1774,7 @@ const HTML_CONTENT = `
         } else {
             editModeBtn.innerHTML = isLoggedIn ? 
                 '<span class="flex items-center gap-3"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>进入编辑模式</span>' : 
-                '<span class="flex items-center gap-3 text-slate-400"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>编辑模式 (需登录)</span>';
+                '<span class="flex items-center gap-3 text-muted-foreground"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>编辑模式 (需登录)</span>';
             document.body.classList.remove('edit-mode');
             if(addCategoryContainer) addCategoryContainer.classList.add('hidden');
         }
@@ -1515,7 +1794,7 @@ const HTML_CONTENT = `
         const box = document.createElement('div');
         box.className = refEl.className
             .replace('opacity-0', 'opacity-100')
-            .replace('object-contain', '') + ' text-black dark:text-slate-300';
+            .replace('object-contain', '') + ' text-black dark:text-muted-foreground';
         box.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" style="display:block;width:100%;height:100%"><path fill="currentColor" d="M62 32C62 15.432 48.568 2 32 2C15.861 2 2.703 14.746 2.031 30.72c-.008.196-.01.395-.014.592c-.005.23-.017.458-.017.688v.101C2 48.614 15.432 62 32 62s30-13.386 30-29.899l-.002-.049zM37.99 59.351c-.525-.285-1.029-.752-1.234-1.388c-.371-1.152-.084-2.046.342-3.086c.34-.833-.117-1.795.109-2.667c.441-1.697.973-3.536.809-5.359c-.102-1.119-.35-1.17-1.178-1.816c-.873-.685-.873-1.654-1.457-2.52c-.529-.787.895-3.777.498-3.959c-.445-.205-1.457.063-1.777-.362c-.344-.458-.584-.999-1.057-1.354c-.305-.229-1.654-.995-2.014-.941c-1.813.271-3.777-1.497-4.934-2.65c-.797-.791-1.129-1.678-1.713-2.593c-.494-.775-1.242-.842-1.609-1.803c-.385-1.004-.156-2.29-.273-3.346c-.127-1.135-.691-1.497-1.396-2.365c-1.508-1.863-2.063-4.643-4.924-4.643c-1.537 0-1.428 3.348-2.666 2.899c-1.4-.507-3.566 1.891-3.535 1.568c.164-1.674 1.883-2.488 2.051-2.987c.549-1.638-2.453-1.246-2.068-2.612c.188-.672 2.098-1.161 1.703-1.562c-.119-.122-1.58-1.147-1.508-1.198c.271-.19 1.449.412 1.193-.37c-.086-.26-.225-.499-.357-.74a28 28 0 0 1 1.92-1.975c1.014-.083 2.066-.02 2.447.054c2.416.476 3.256 1.699 5.672.794c1.162-.434 5.445.319 6.059 1.537c.334.666 1.578-.403 2.063-.475c.52-.078 1.695.723 2.053.232c.943-1.291-.604-1.827 1.223-.833c1.225.667 3.619-2.266 2.861 1.181c-.547 2.485-2.557 2.54-4.031 4.159c-1.451 1.594 2.871 2.028 2.982 3.468c.32 4.146 2.531-.338 1.939-1.812c-1.145-2.855 1.303-2.071 2.289-.257c.547 1.007.963.159 1.633-.192c.543-.283.688 1.25.805 1.517c.385.887 1.65 1.152 1.436 2.294c-.238 1.259-1.133.881-2.008 1.094c-.977.237.158 1.059.016 1.359c-.154.328-1.332.464-1.646.65c-.924.544-.359 1.605-1.082 2.175c-.496.392-.996.137-1.092.871c-.113.865-1.707 1.143-1.5 1.97c.057.227.516 1.923.227 2.013c-.133.043-1.184-1.475-1.471-1.627c-.568-.301-3.15-.055-3.482 1.654c-.215 1.105 1.563 2.85 2.016 1.328c.561-1.873.828 1.091.693 1.207c.268.234 1.836-.385 1.371.7c-.197.459.193 1.656.889 1.287c.291-.154 1.041.31 1.172.061a2.14 2.14 0 0 1 .742-.692c.701-.41 1.75-.025 2.518.02c.469.027 4.313 2.124 4.334 2.545c.084 1.575 2.99 1.37 3.436 1.933c1.199 1.526.83.751-.045 2.706c-.441.984-.057 2.191-1.125 2.904c-.514.342-1.141.171-1.598.655c-.412.437-.25.959-.5 1.464c-.301.601-4.346 4.236-4.613 5.115c-.133.441-1.34.825-.322 1.248c.592.174-1.311 1.973-.396 2.718c.223.181.369.334.479.471c-.457.122-.91.233-1.369.333M35.594 4.237c-.039.145.02.316.271.483c.566.375-.162 1.208-.943.671c-.779-.537-2.531.241-2.41.644c.119.403.66.563 1.496.242c.834-.322 1.178.048 1.318.43c.096.259 0 .403-.027.752c-.025.349-.996.107-1.803.162c-.809.054-1.67-.162-1.645-.619c.027-.456-.861-1.289-1.391-1.637c-.529-.348.232-1.1.934-.537c.699.564.727-.107 1.535-.321c.459-.122.275-.305.119-.479q1.29.047 2.546.209m3.517 8.869c.605.164 1.656.929 1.656 1.291c0 .363-.477.817-.688.765c-1.523-.371-2.807-1.874-3.514-2.697c-1.234-1.435-1.156-.205-3.111-.826c-.5-.16-1.293-1.711-.768-2.476s1.131-.886 1.615-.683c.484.2 1.898-.645 2.223.362c.322 1.007 1.211 2.292 2.02 2.636c.81.342-.04 1.464.567 1.628m.485 4.673c.242.483-1.455-.564-1.859-1.047c-.402-.482-1.01-1.571-.523-2.054c.484-.482 1.57 1.005 2.141 1.33c1.129.645-.001 1.289.241 1.771m-8.594-7.315c.117-.161.365.242.586.645s-.084.971-.586.885c-.502-.084-.281-1.136 0-1.53m0-4.052s.473 1.154 0 .966s-.496-.671 0-.966m.096 3.65c-.135-.321-.166-1.64.162-2.04c.484-.59 1.266.564.74 1.02c-.525.457-.768 1.343-.902 1.02m-6.077 1.415c-.879-.063-.898-.823-1.02-1.226s-.85.765-1.586 0s.172-1.771.01-2.376c-.162-.604 1.736 0 2.02 0s1.051 1.248 1.252 1.227c.203-.02 1.293.987 1.293.584c0-.402.166-1.088.93-1.168c1.172-.121.121 1.289.08 1.838c-.039.549.891 1.504 1.232 1.907c.344.403-.867.686-1.07.443c-.201-.242-.727 0-1.172.322c-.443.322-1.656-.443-2.221-.685c-.566-.241 1.131-.804.252-.866m3.141-6.354c.781.269 1.225.51 1.609 0c.371-.492.654 1.073.385 1.502c-.27.431-.781.324-.863 0c-.08-.32-1.912-1.771-1.131-1.502m1.131 4.859c-.268-.35-.295-.752 0-1.047c.297-.295.201-.644.729-.751c.26-.054.295.348.295.724s.324.859 0 1.448c-.323.589-.754-.026-1.024-.374m2.205-5.969c-.012.074-.061.118-.184.106a.6.6 0 0 1-.236-.095q.21-.008.42-.011M25.389 5.15c.619 0 .539.418 1.051.719c.512.3.242-1.552.592-.854c.35.697 1.389 1.664.889 1.851c-.43.163-2.234.859-2.396.739s-.377-.63-.809-.739c-.432-.107-.889-1.127-1.186-1.1c-.113.01-.123-.184-.049-.442a28 28 0 0 1 1.572-.455c.058.158.146.281.336.281m13.519 30.025c-.645.666-1.756-.464-2.523-.424s-1.152-.765-1.818-.684c-.668.079.182-.847 1.111-.362c.927.483 3.756.925 3.23 1.47m12.93-22.934c-.188.24-.402.408-.607.585c-.605.524-1.736.484-1.898.846s-.566 1.489-1.98 1.494s-1.01 2.131-1.131 2.738s-.443 1.325-.848.801s-.566-.323-1.816-1.853s-.77-2.375-.365-2.818c.404-.442.566-1.49 0-1.329s-.889-.202-.768-.703s.727-.867 0-1.402s-.324-2.445-.889-4.189c-.566-1.745-1.334-.51-2.586-.443s-1.455-.873-.889-1.303a27.95 27.95 0 0 1 13.777 7.576"/></svg>';
         return box;
     }
@@ -1552,13 +1831,13 @@ const HTML_CONTENT = `
         
         let cardBaseClass = isAppLayout 
             ? 'flex flex-col items-center justify-start py-1 gap-1.5 hover:z-10' 
-            : 'flex flex-col p-4 bg-white/90 dark:bg-[#1e293b]/60 backdrop-blur-sm bg-white/80 border border-gray-200 dark:border-slate-700/50 hover:border-emerald-500/50 dark:hover:border-emerald-400/50 shadow-sm hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.1)] dark:shadow-none dark:hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.4)] hover:-translate-y-1.5';
+            : 'flex flex-col p-4 bg-[color-mix(in_oklab,var(--card)_90%,transparent)] dark:bg-[color-mix(in_oklab,var(--card)_60%,transparent)] backdrop-blur-sm border border-line dark:border-[color-mix(in_oklab,var(--border)_50%,transparent)] hover:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] dark:hover:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] shadow-sm hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.1)] dark:shadow-none dark:hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.4)] hover:-translate-y-1.5';
             
         if (link.isPrivate && !isAppLayout) {
-            cardBaseClass += ' ring-1 ring-amber-400/40 bg-amber-50/80 dark:bg-amber-900/10 !border-amber-200 dark:!border-amber-700/50';
+            cardBaseClass += ' ring-1 ring-amber-400/40 bg-[color-mix(in_oklab,var(--card)_85%,transparent)] dark:bg-amber-900/10 !border-amber-200 dark:!border-amber-700/50';
         }
 
-        card.className = \`group relative h-full w-full rounded-2xl transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)] cursor-pointer select-none \${cardBaseClass}\`;
+        card.className = \`group relative h-full w-full rounded-[var(--radius-2xl)] transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)] cursor-pointer select-none \${cardBaseClass}\`;
         
         if (isEditMode) {
             card.setAttribute('draggable', 'true');
@@ -1574,14 +1853,12 @@ const HTML_CONTENT = `
             ? 'flex flex-col items-center justify-center w-full relative' 
             : 'flex items-center gap-3 mb-2.5 w-full';
         
-        // 图标占位容器：图标加载完成前显示 spinner
         const iconWrap = document.createElement('div');
         const iconWrapClass = isAppLayout
             ? 'relative w-14 h-14 sm:w-16 sm:h-16'
             : 'relative w-9 h-9';
         iconWrap.className = iconWrapClass;
 
-        // 加载中的 spinner（居中，位于图标底层）
         const spinner = document.createElement('span');
         spinner.className = 'absolute inset-0 flex items-center justify-center pointer-events-none';
         spinner.innerHTML = '<span class="block icon-spinner rounded-full animate-spin" style="width:60%;height:60%;aspect-ratio:1/1;"></span>';
@@ -1596,13 +1873,13 @@ const HTML_CONTENT = `
         let iconClass = 'relative w-full h-full opacity-0 transition duration-300';
         if (isAppLayout) {
              // APP 风格：大图标、白底、大圆角、阴影
-             iconClass += ' rounded-[1.2rem] object-contain bg-slate-100 dark:bg-slate-600 p-2 shadow-md hover:shadow-lg group-hover:scale-105 group-active:scale-95 z-10';
+             iconClass += ' rounded-[1.2rem] object-contain bg-muted dark:bg-muted p-2 shadow-md hover:shadow-lg group-hover:scale-105 group-active:scale-95 z-10';
              if (link.isPrivate) {
                  iconClass += ' ring-2 ring-amber-400';
              }
         } else {
              // 列表风格：小图标、淡底
-             iconClass += ' rounded-lg object-contain bg-slate-100 dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-700 transition-transform group-hover:scale-105 pointer-events-none';
+             iconClass += ' rounded-lg object-contain bg-muted dark:bg-muted p-1 border border-line dark:border-line transition-transform group-hover:scale-105 pointer-events-none';
         }
         icon.className = iconClass;
 
@@ -1621,7 +1898,6 @@ const HTML_CONTENT = `
         } else {
             icon.src = resolvedSrc;
             icon.onload = function() {
-                // 图标加载完成后淡入并隐藏 spinner
                 this.classList.add('opacity-100');
                 this.classList.remove('opacity-0');
                 spinner.remove();
@@ -1638,8 +1914,8 @@ const HTML_CONTENT = `
         
         const title = document.createElement('div');
         const titleAlign = isAppLayout 
-            ? 'text-center text-xs sm:text-sm font-medium mt-1 w-[120%] truncate px-1 text-slate-700 dark:text-slate-200 drop-shadow-sm' 
-            : 'font-semibold text-sm flex-1 truncate text-slate-700 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors pointer-events-none';
+            ? 'text-center text-xs sm:text-sm font-medium mt-1 w-[120%] truncate px-1 text-base-foreground dark:text-base-foreground drop-shadow-sm' 
+            : 'font-semibold text-sm flex-1 truncate text-base-foreground group-hover:text-accent dark:group-hover:text-accent transition-colors pointer-events-none';
         
         title.className = \`card-title pointer-events-none \${titleAlign}\`;
         title.textContent = link.name;
@@ -1657,7 +1933,7 @@ const HTML_CONTENT = `
 
         if (!isAppLayout) {
             const desc = document.createElement('div');
-            desc.className = 'text-xs text-slate-500 dark:text-slate-400 line-clamp-2 min-h-[1.25rem] card-tip leading-relaxed pointer-events-none w-full';
+            desc.className = 'text-xs text-muted-foreground line-clamp-2 min-h-[1.25rem] card-tip leading-relaxed pointer-events-none w-full';
             desc.textContent = link.tips || '';
             card.appendChild(desc);
         }
@@ -1684,21 +1960,21 @@ const HTML_CONTENT = `
 
             const menuBtn = document.createElement('button');
             const btnStyle = isAppLayout
-                ? 'w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-emerald-500 dark:hover:bg-emerald-600 hover:text-white'
-                : 'w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-700/50 backdrop-blur-sm';
+                ? 'w-6 h-6 rounded-full bg-secondary dark:bg-muted text-muted-foreground shadow-sm hover:bg-accent dark:hover:bg-accent hover:text-accent-foreground'
+                : 'w-7 h-7 rounded-lg text-muted-foreground hover:text-muted-foreground dark:hover:text-base-foreground hover:bg-[color-mix(in_oklab,var(--muted)_80%,transparent)] dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] backdrop-blur-sm';
             
             menuBtn.className = \`\${btnStyle} flex items-center justify-center transition-all duration-200\`;
             menuBtn.innerHTML = '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>';
             
             const dropdown = document.createElement('div');
-            dropdown.className = 'hidden absolute right-0 top-6 w-28 bg-white dark:bg-[#1e293b] rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden transform origin-top-right transition-all z-50 flex flex-col p-1 card-menu-dropdown';
+            dropdown.className = 'hidden absolute right-0 top-6 w-28 bg-card rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden transform origin-top-right transition-all z-50 flex flex-col p-1 card-menu-dropdown';
             
             dropdown.innerHTML = \`
-                <button class="menu-edit w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700/50 hover:text-emerald-600 transition-colors flex items-center gap-2">
+                <button class="menu-edit w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-base-foreground dark:text-base-foreground hover:bg-soft dark:hover:bg-[color-mix(in_oklab,var(--muted)_60%,transparent)] hover:text-accent transition-colors flex items-center gap-2">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                     编辑
                 </button>
-                <button class="menu-delete w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors flex items-center gap-2">
+                <button class="menu-delete w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-base-foreground dark:text-base-foreground hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors flex items-center gap-2">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     删除
                 </button>
@@ -1810,7 +2086,7 @@ const HTML_CONTENT = `
         menu.innerHTML = '';
         Object.keys(categories).forEach(cat => {
             const item = document.createElement('div');
-            item.className = 'px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700 cursor-pointer transition-colors';
+            item.className = 'px-4 py-2.5 text-sm text-base-foreground dark:text-base-foreground hover:bg-soft dark:hover:bg-muted cursor-pointer transition-colors';
             item.textContent = cat;
             item.onclick = () => {
                 document.getElementById('category-select-value').value = cat;
@@ -1821,7 +2097,6 @@ const HTML_CONTENT = `
         });
     }
 
-    // 增量更新：仅重建单个分类的卡片网格
     function renderCategoryGrid(category) {
         const grid = document.getElementById(gridId(category));
         const cat = categories[category];
@@ -1833,7 +2108,6 @@ const HTML_CONTENT = `
             if (card) cardsFragment.appendChild(card);
         });
 
-        // 只移除既有卡片，保留编辑模式下的“+”占位符
         Array.from(grid.children).forEach(child => {
             if (!child.classList.contains('add-card-placeholder')) child.remove();
         });
@@ -1872,7 +2146,7 @@ const HTML_CONTENT = `
         } catch (e) {
             await customAlert('添加失败: ' + e);
         }
-        // 增量更新：仅重建该分类网格（若该卡片本应可见）
+
         if (isEditMode || !newLink.isPrivate || isLoggedIn) {
             renderCategoryGrid(category);
             renderCategoryButtons();
@@ -2063,7 +2337,7 @@ const HTML_CONTENT = `
 
             // 占位符样式
             mobilePlaceholder.style.opacity = '0.3';
-            mobilePlaceholder.classList.add('border-dashed', 'border-2', 'border-emerald-400');
+            mobilePlaceholder.classList.add('border-dashed', 'border-2', 'border-accent');
 
             if (navigator.vibrate) navigator.vibrate(50);
             
@@ -2235,7 +2509,7 @@ const HTML_CONTENT = `
                         if (mobileClone) mobileClone.remove();
                         if (mobilePlaceholder) {
                              mobilePlaceholder.style.opacity = '';
-                             mobilePlaceholder.classList.remove('border-dashed', 'border-2', 'border-emerald-400');
+                             mobilePlaceholder.classList.remove('border-dashed', 'border-2', 'border-accent');
                         }
                         
                         // 保存排序
@@ -2310,7 +2584,14 @@ const HTML_CONTENT = `
         } else {
              document.documentElement.classList.remove('dark');
         }
+        if (typeof window.__getThemeData === 'function') {
+            window.__applyThemeVars(window.__getThemeData(), isDark);
+        }
         updateThemeSwitchUI();
+        const ov = document.getElementById('theme-dialog-overlay');
+        if (ov && !ov.classList.contains('overlay-hidden') && typeof refreshThemeUI === 'function') {
+            refreshThemeUI();
+        }
     }
     
     function updateThemeSwitchUI() {
@@ -2318,6 +2599,441 @@ const HTML_CONTENT = `
         const checkbox = document.getElementById('theme-switch-checkbox');
         if(checkbox) checkbox.checked = isDark;
     }
+
+    /* ===== 主题皮肤 ===== */
+    // 内置推荐主题库：preview 色值仅用于卡片渲染（零网络），应用时经 fetchTheme 拉取全量 cssVars
+    const BUILTIN_THEMES = [
+        { id: 'default', name: '默认配色', tags: ['清爽绿'], preview: { light: { background: '#ffffff', foreground: '#334155', primary: '#16a34a', secondary: '#f1f5f9', accent: '#4ade80' }, dark: { background: '#0f172a', foreground: '#e2e8f0', primary: '#4ade80', secondary: '#1e293b', accent: '#22c55e' } }, builtin: true },
+        { id: 'claude', name: 'Claude', tags: ['暖色', 'Anthropic'], preview: { light: { background: '#faf9f5', foreground: '#4a4540', primary: '#d97757', secondary: '#ece9e2', accent: '#e9e5dc' }, dark: { background: '#262624', foreground: '#d4cfc4', primary: '#cd6e4e', secondary: '#3d3c38', accent: '#33322e' } } },
+        { id: 'amethyst-haze', name: 'Amethyst Haze', tags: ['优雅紫'], preview: { light: { background: '#f5f3f8', foreground: '#4a4160', primary: '#7c5fa8', secondary: '#cbbde0', accent: '#d8a2b8' }, dark: { background: '#251f33', foreground: '#e7e2f1', primary: '#9d82c4', secondary: '#4a4160', accent: '#b0748f' } } },
+        { id: 'catppuccin', name: 'Catppuccin', tags: ['柔和'], preview: { light: { background: '#eff1f5', foreground: '#4c4f69', primary: '#7287fd', secondary: '#ccd0da', accent: '#f9b8c4' }, dark: { background: '#303446', foreground: '#c6d0f5', primary: '#a6d189', secondary: '#414559', accent: '#f2d5cf' } } },
+        { id: 'kodama-grove', name: 'Kodama Grove', tags: ['自然绿'], preview: { light: { background: '#f4f7f2', foreground: '#3a4a3a', primary: '#4a7c59', secondary: '#dfe8dd', accent: '#8fbf9f' }, dark: { background: '#1f2a22', foreground: '#dce8dc', primary: '#7fb98b', secondary: '#34453a', accent: '#5d8f6f' } } },
+        { id: 'quantum-rose', name: 'Quantum Rose', tags: ['玫粉'], preview: { light: { background: '#fdf2f5', foreground: '#5a3a45', primary: '#e2559a', secondary: '#f6dbe4', accent: '#f2a4c4' }, dark: { background: '#2a1c24', foreground: '#f5ddea', primary: '#e87ea8', secondary: '#4a3340', accent: '#c25a86' } } },
+        { id: 'elegant-luxury', name: 'Elegant Luxury', tags: ['沉稳'], preview: { light: { background: '#f8f6f2', foreground: '#3c3830', primary: '#b08968', secondary: '#e9e2d6', accent: '#c9b69a' }, dark: { background: '#211c18', foreground: '#e8e0d4', primary: '#cba47f', secondary: '#3a322a', accent: '#a58160' } } },
+        { id: 'neo-brutalism', name: 'Neo Brutalism', tags: ['高饱和'], preview: { light: { background: '#fff8e7', foreground: '#1a1a1a', primary: '#f04b3c', secondary: '#ffd23f', accent: '#5ac8fa' }, dark: { background: '#1a1a1a', foreground: '#fff8e7', primary: '#ff6b5e', secondary: '#ffd23f', accent: '#5ac8fa' } } },
+        { id: 'graphite', name: 'Graphite', tags: ['极简灰'], preview: { light: { background: '#f5f5f5', foreground: '#333333', primary: '#71717a', secondary: '#e4e4e7', accent: '#a1a1aa' }, dark: { background: '#18181b', foreground: '#d4d4d8', primary: '#a1a1aa', secondary: '#27272a', accent: '#71717a' } } }
+    ];
+
+    function getThemeMeta(key, fallback) {
+        const v = localStorage.getItem(key);
+        return v === null ? fallback : v;
+    }
+    function getThemeName() { return getThemeMeta('themeName', null); }
+    function getThemeKind() { return getThemeMeta('themeKind', window.__getThemeData() ? 'custom' : 'default'); }
+    function safeSetItem(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { console.warn('localStorage 写入失败:', k, e); return false; } }
+    function safeRemoveItem(k) { try { localStorage.removeItem(k); } catch (e) { console.warn('localStorage 移除失败:', k, e); } }
+
+    // 快照当前主题（回退用）
+    function snapshotCurrentTheme() {
+        return {
+            themeData: window.__getThemeData(),
+            themeSource: getThemeMeta('themeSource', null),
+            themeName: getThemeName(),
+            themeKind: getThemeKind()
+        };
+    }
+    function saveLastSnapshot(from) {
+        try { localStorage.setItem('lastTheme', JSON.stringify(from)); } catch (e) { /* 忽略 */ }
+    }
+    function getLastSnapshot() {
+        try { return JSON.parse(localStorage.getItem('lastTheme') || 'null'); } catch (e) { return null; }
+    }
+    function lastSnapshotExists() { return !!getLastSnapshot(); }
+
+    function themeStatusLabel(kind, name) {
+        switch (kind) {
+            case 'builtin': return name || '内置主题';
+            case 'ai': return 'AI · ' + (name || '生成主题');
+            case 'custom': return name ? '自定义主题（' + name + '）' : '自定义主题';
+            default: return '默认配色';
+        }
+    }
+
+    function renderThemeStatusBar() {
+        const bar = document.getElementById('theme-status-bar');
+        if (!bar) return;
+        const data = window.__getThemeData();
+        const kind = getThemeKind();
+        const name = getThemeName();
+        const isDark = document.documentElement.classList.contains('dark');
+        const label = themeStatusLabel(kind, name);
+        const guideMap = {
+            default: '选一个喜欢的卡片即可换肤，点击后立刻生效。',
+            builtin: '点其他卡片可一键切换；不满意可回退上一套。',
+            custom: '点其他卡片可一键切换；不满意可回退上一套。',
+            ai: '点其他卡片可一键切换；不满意可回退上一套。'
+        };
+        const guide = document.getElementById('theme-guide');
+        if (guide) guide.textContent = guideMap[kind] || guideMap.default;
+        // 取色块：内置主题用 preview 里的对应色；否则用默认绿系
+        let swatches = ['#16a34a', '#f1f5f9', '#4ade80'];
+        const b = kind === 'default' ? null : BUILTIN_THEMES.find(t => t.name === name);
+        if (data && b) {
+            const p = b.preview[isDark ? 'dark' : 'light'];
+            swatches = [p.primary, p.secondary, p.accent];
+        }
+        bar.innerHTML =
+            '<div class="flex items-center justify-between gap-3 py-3 px-4 rounded-[var(--radius-xl)] bg-muted dark:bg-muted">' +
+              '<div class="flex items-center gap-2 min-w-0">' +
+                '<span class="shrink-0 flex gap-1">' +
+                  swatches.map(c => '<span class="inline-block w-3.5 h-3.5 rounded-full border" style="background:' + esc(c) + ';border-color:rgba(128,128,128,0.35)"></span>').join('') +
+                '</span>' +
+                '<span class="truncate text-sm font-medium text-base-foreground">' + esc('当前：' + label) + '</span>' +
+              '</div>' +
+              '<span class="flex items-center gap-2 shrink-0">' +
+                (isLoggedIn && _themePushFailed ? '<button onclick="retryThemePush()" title="主题推送到云端失败，点击立即重试" class="px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-secondary transition-colors shrink-0">未同步 · 重试</button>' : '') +
+                (lastSnapshotExists() ? '<button onclick="restoreLastTheme()" class="px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium text-muted-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">回退上一套</button>' : '') +
+                '<button onclick="resetCustomTheme()" class="px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium text-muted-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">恢复默认</button>' +
+              '</span>' +
+            '</div>';
+        renderThemeKindToggle();
+    }
+    function renderThemeKindToggle() {
+        const el = document.getElementById('theme-kind-toggle');
+        if (el) el.textContent = '跟随「' + (document.documentElement.classList.contains('dark') ? '深色' : '浅色') + '」模式';
+    }
+
+    function themeCardHTML(t) {
+        const isDark = document.documentElement.classList.contains('dark');
+        const p = t.preview[isDark ? 'dark' : 'light'];
+        const data = window.__getThemeData();
+        const kind = getThemeKind();
+        const isActive = (t.id === 'default') ? !data : (kind === 'builtin' && getThemeName() === t.name);
+        const borderColor = isActive ? p.primary : 'rgba(128,128,128,0.25)';
+        return '<button type="button" data-theme-id="' + esc(t.id) + '" data-theme-name="' + esc(t.name) + '" ' +
+            'class="theme-card w-full text-left rounded-2xl px-3 py-3 border transition-all duration-150 hover:translate-y-[-2px] hover:shadow-lg ' + (isActive ? 'theme-card-active' : '') + '" ' +
+            'style="background:' + esc(p.background) + ';border-color:' + esc(borderColor) + ';color:' + esc(p.foreground) + (isActive ? ';--ring-color:' + esc(p.primary) : '') + '">' +
+            '<div class="flex items-center justify-between mb-2">' +
+              '<div class="flex gap-1">' +
+                '<span class="inline-block w-3 h-3 rounded-sm border" style="background:' + esc(p.primary) + ';border-color:rgba(128,128,128,0.35)"></span>' +
+                '<span class="inline-block w-3 h-3 rounded-sm border" style="background:' + esc(p.secondary) + ';border-color:rgba(128,128,128,0.35)"></span>' +
+                '<span class="inline-block w-3 h-3 rounded-sm border" style="background:' + esc(p.accent) + ';border-color:rgba(128,128,128,0.35)"></span>' +
+              '</div>' +
+              (isActive ? '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style="background:' + esc(p.primary) + ';color:' + esc(p.background) + '">使用中</span>' : '') +
+            '</div>' +
+            '<div class="text-sm font-semibold truncate">' + esc(t.name) + '</div>' +
+            '<div class="text-[10px] opacity-70 truncate">' + esc(t.tags.join(' · ')) + '</div>' +
+            '</button>';
+    }
+
+    let activeThemeLoadP = null;
+    function renderThemeGrid() {
+        const grid = document.getElementById('theme-grid');
+        if (!grid) return;
+        grid.innerHTML = BUILTIN_THEMES.map(themeCardHTML).join('');
+        grid.querySelectorAll('.theme-card').forEach(c => {
+            c.addEventListener('click', onThemeCardClick);
+        });
+    }
+
+    async function onThemeCardClick(e) {
+        const card = e.currentTarget;
+        if (activeThemeLoadP) return;
+        const id = card.dataset.themeId;
+        const name = card.dataset.themeName;
+        if (id === 'default') { applyDefaultTheme(); return; }
+        await applyBuiltinById(id, name);
+    }
+    async function applyBuiltinById(id, name) {
+        saveLastSnapshot(snapshotCurrentTheme());
+        setCardLoading(true, name);
+        try {
+            const t = await fetchTheme(id);
+            if (!t) throw new Error('主题数据为空');
+            const themeLayer = t.theme || {};
+            const tLight = Object.assign({}, themeLayer, t.light || {});
+            const tDark = Object.assign({}, themeLayer, t.dark || t.light || {});
+            cacheTheme(id, t);
+            const meta = BUILTIN_THEMES.find(b => b.id === id);
+            applyThemeData({ data: { light: tLight, dark: tDark, theme: themeLayer, fonts: t.fonts || themeLayer.fonts || null }, name: meta ? meta.name : name, kind: 'builtin', source: 'tweakcn:' + id });
+        } catch (err) {
+            safeRemoveItem('lastTheme'); // 失败不保留快照，原主题不变
+            setThemeError('获取失败：' + err.message + '，已保留原主题');
+        } finally {
+            if (activeThemeLoadP) setCardLoading(false);
+        }
+    }
+
+    function restoreSiteDefaultTheme() {
+        safeRemoveItem('themeData');
+        safeRemoveItem('themeSource');
+        safeRemoveItem('themeName');
+        safeRemoveItem('themeKind');
+        safeSetItem('themeUpdatedAt', String(Date.now()));
+        safeSetItem('themePersonal', isLoggedIn ? '0' : '1');
+        window.__applyThemeVars(null, document.documentElement.classList.contains('dark'));
+        const input = document.getElementById('theme-input');
+        if (input) input.value = '';
+        setCardLoading(false);
+        refreshThemeUI();
+    }
+    function applyDefaultTheme() {
+        if (!window.__getThemeData() && !getThemeName()) { refreshThemeUI(); return; }
+        saveLastSnapshot(snapshotCurrentTheme());
+        restoreSiteDefaultTheme();
+        scheduleThemeSync();
+    }
+
+    function applyThemeData({ data, name, kind, source }) {
+        if (name != null) safeSetItem('themeName', name); else safeRemoveItem('themeName');
+        safeSetItem('themeKind', kind || 'custom');
+        safeSetItem('themeData', JSON.stringify(data));
+        if (source != null) safeSetItem('themeSource', source); else safeRemoveItem('themeSource');
+        safeSetItem('themeUpdatedAt', String(Date.now()));
+        safeSetItem('themePersonal', '1'); 
+        window.__applyThemeVars(data, document.documentElement.classList.contains('dark'));
+        setCardLoading(false);
+        refreshThemeUI();
+        scheduleThemeSync();
+    }
+
+    function collectLocalTheme() {
+        return {
+            themeData: window.__getThemeData() || null,
+            name: getThemeName() || '',
+            kind: getThemeMeta('themeKind', '') || '',
+            source: getThemeMeta('themeSource', '') || '',
+        };
+    }
+    let _themeSyncTimer = null;
+    let _themePushFailed = false; 
+    function scheduleThemeSync() {
+        if (!isLoggedIn) return;
+        clearTimeout(_themeSyncTimer);
+        _themeSyncTimer = setTimeout(pushThemeToKv, 800);
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden' && isLoggedIn && _themeSyncTimer) {
+            clearTimeout(_themeSyncTimer);
+            _themeSyncTimer = null;
+            try {
+                fetchWithAuth('/api/saveTheme', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(collectLocalTheme()),
+                    keepalive: true,
+                }).catch(function () { });
+            } catch (e) { /* 忽略 */ }
+        }
+    });
+
+    function retryThemePush() { pushThemeToKv(); }
+    async function pushThemeToKv() {
+        if (!isLoggedIn) return;
+        _themeSyncTimer = null;
+        let ok = false;
+        try {
+            const res = await fetchWithAuth('/api/saveTheme', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(collectLocalTheme()),
+            });
+            if (res.ok) {
+                const j = await res.json();
+                if (j && j.updatedAt) {
+                    safeSetItem('themeUpdatedAt', String(j.updatedAt));
+                    safeSetItem('themePersonal', '0');
+                    ok = true;
+                }
+            }
+        } catch (e) { /* 网络异常：本地已生效，标记失败等待重试 */ }
+        if (_themePushFailed !== ok) {
+            _themePushFailed = !ok;
+            renderThemeStatusBar();
+        }
+    }
+
+    async function pullThemeFromKv() {
+        if (!isLoggedIn) return;
+        try {
+            const res = await fetchWithAuth('/api/getTheme');
+            if (!res.ok) return;
+            const j = await res.json();
+            const remote = j && j.theme;
+            if (!remote || remote.updatedAt == null) return; // 从未同步过：保留本地
+            const local = Number(localStorage.getItem('themeUpdatedAt') || 0);
+            if (remote.updatedAt <= local) return; // 本地更新或相同：不回退
+            // 应用远端
+            if (remote.themeData) {
+                safeSetItem('themeData', JSON.stringify(remote.themeData));
+                if (remote.name) safeSetItem('themeName', remote.name); else safeRemoveItem('themeName');
+                safeSetItem('themeKind', remote.kind || 'custom');
+                if (remote.source) safeSetItem('themeSource', remote.source); else safeRemoveItem('themeSource');
+                window.__applyThemeVars(remote.themeData, document.documentElement.classList.contains('dark'));
+            } else {
+                safeRemoveItem('themeData');
+                safeRemoveItem('themeName');
+                safeRemoveItem('themeKind');
+                safeRemoveItem('themeSource');
+                window.__applyThemeVars(null, document.documentElement.classList.contains('dark'));
+            }
+            safeSetItem('themeUpdatedAt', String(remote.updatedAt));
+            safeSetItem('themePersonal', '0');
+            if (typeof refreshThemeUI === 'function') refreshThemeUI();
+        } catch (e) { /* 网络异常忽略 */ }
+    }
+
+
+    function restoreLastTheme() {
+        const last = getLastSnapshot();
+        if (!last) return;
+        const current = snapshotCurrentTheme();
+        saveLastSnapshot(current);
+        setCardLoading(false);
+        if (last.themeData) {
+            applyThemeData({ data: last.themeData, name: last.themeName, kind: last.themeKind || 'custom', source: last.themeSource });
+        } else {
+            restoreSiteDefaultTheme();
+            scheduleThemeSync();
+        }
+        const input = document.getElementById('theme-input');
+        if (input) input.value = getThemeMeta('themeSource', '');
+    }
+
+    // —— 主题缓存 ——
+    function getCacheKey(id) { return 'themeCache:' + id; }
+    function cacheTheme(id, t) {
+        try {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.indexOf('themeCache:') === 0) keys.push(k);
+            }
+            if (keys.length >= 8) { const oldest = keys[0]; if (oldest) localStorage.removeItem(oldest); } // 超限时任删一条缓存防膨胀（key 顺序不保证严格按写入时间）
+            localStorage.setItem(getCacheKey(id), JSON.stringify(t));
+        } catch (e) { /* 忽略 */ }
+    }
+    function getCachedTheme(id) {
+        try { return JSON.parse(localStorage.getItem(getCacheKey(id)) || 'null'); } catch (e) { return null; }
+    }
+
+    // —— 加载/错误状态控制 ——
+    function setCardLoading(on, name) {
+        document.querySelectorAll('.theme-card').forEach(c => c.classList.toggle('theme-card-disabled', !!on));
+        activeThemeLoadP = on ? true : null;
+        if (on) {
+            const bar = document.getElementById('theme-status-bar');
+            const txt = bar && bar.querySelector('span.truncate');
+            if (txt) txt.textContent = '正在应用' + (name ? ' ' + name : '') + '…';
+        } else {
+            renderThemeStatusBar();
+            renderThemeGrid();
+        }
+    }
+    function setThemeError(msg) {
+        const bar = document.getElementById('theme-status-bar');
+        if (bar) {
+            bar.innerHTML = '<div class="flex items-center justify-between gap-3 py-3 px-4 rounded-[var(--radius-xl)] bg-muted dark:bg-muted">' +
+                '<span class="text-sm text-red-500">' + esc(msg) + '</span>' +
+                '<button onclick="closeThemeDialog()" class="px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium text-accent hover:bg-secondary transition-colors shrink-0">确定</button>' +
+                '</div>';
+        }
+    }
+    function refreshThemeUI() {
+        renderThemeStatusBar();
+        renderThemeGrid();
+    }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+    function themeStatus(msg, isError) {
+        const el = document.getElementById('theme-status');
+        if (el) { el.textContent = msg; el.style.color = isError ? '#ef4444' : 'var(--muted-foreground)'; }
+    }
+    function openThemeDialog() {
+        const input = document.getElementById('theme-input');
+        const saved = getThemeMeta('themeSource', '');
+        if (input) input.value = saved;
+        const overlay = document.getElementById('theme-dialog-overlay');
+        if (overlay) { overlay.classList.remove('hidden'); void overlay.offsetWidth; overlay.classList.remove('overlay-hidden'); overlay.classList.add('overlay-visible'); }
+        const box = document.getElementById('theme-dialog-box');
+        if (box) { box.classList.remove('dialog-scale-hidden'); box.classList.add('dialog-scale-visible'); }
+        refreshThemeUI();
+        themeStatus('', false);
+    }
+    function closeThemeDialog() {
+        const overlay = document.getElementById('theme-dialog-overlay');
+        if (overlay) { overlay.classList.remove('overlay-visible'); overlay.classList.add('overlay-hidden'); }
+        const box = document.getElementById('theme-dialog-box');
+        if (box) { box.classList.remove('dialog-scale-visible'); box.classList.add('dialog-scale-hidden'); }
+        setTimeout(() => { if (overlay && overlay.classList.contains('overlay-hidden')) overlay.classList.add('hidden'); }, 300);
+    }
+    function extractThemeId(url) {
+        const s = String(url || '').trim();
+        if (!s) return null;
+        const parts = s.split(/[?#]/)[0].split('/');
+        const idx = parts.lastIndexOf('themes');
+        const cand = idx >= 0 && parts[idx + 1] ? parts[idx + 1] : (parts.length === 1 ? parts[0] : '');
+        const bare = (cand || '').trim();
+        return /^[A-Za-z0-9_-]+$/.test(bare) ? bare : null;
+    }
+
+    async function fetchWithTimeout(url, ms) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(function () { ctrl.abort(); }, ms || 8000);
+        try {
+            return await fetch(url, { signal: ctrl.signal });
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+    async function fetchTheme(id) {
+        const cached = getCachedTheme(id);
+        if (cached) return cached;
+        const endpoints = ['/api/theme-proxy?id=' + encodeURIComponent(id),
+                           'https://tweakcn.com/r/themes/' + encodeURIComponent(id)];
+        for (const ep of endpoints) {
+            try {
+                const res = await fetchWithTimeout(ep);
+                if (!res.ok) continue;
+                const data = await res.json();
+                const cssVars = data && data.cssVars;
+                if (!cssVars) continue;
+                const t = (cssVars.light || cssVars.dark) ? cssVars : (cssVars.theme || null);
+                if (t) { if (data.name && !t.name) t.name = data.name; return t; }
+            } catch (e) { /* 尝试下一个 */ }
+        }
+        throw new Error('无法获取主题，请检查链接或网络');
+    }
+    async function applyCustomTheme() {
+        if (activeThemeLoadP) return;
+        const input = document.getElementById('theme-input');
+        const url = input ? input.value.trim() : '';
+        const id = extractThemeId(url);
+        themeStatus('正在加载主题...', false);
+        if (!id) { themeStatus('链接无效，请提供 tweakcn 主题链接', true); return; }
+        saveLastSnapshot(snapshotCurrentTheme());
+        try {
+            const t = await fetchTheme(id);
+            const themeLayer = t.theme || {};
+            const tLight = Object.assign({}, themeLayer, t.light || {});
+            const tDark = Object.assign({}, themeLayer, t.dark || t.light || {});
+            const themeData = { light: tLight, dark: tDark, theme: themeLayer, fonts: t.fonts || themeLayer.fonts || null };
+            if (!Object.keys(themeData.light).length) throw new Error('主题数据为空');
+            const builtin = BUILTIN_THEMES.find(b => b.id === id);
+            cacheTheme(id, t);
+            applyThemeData({ data: themeData, name: builtin ? builtin.name : (t.name || id), kind: builtin ? 'builtin' : 'custom', source: url });
+            themeStatus('主题应用成功（已保存）。', false);
+        } catch (e) {
+            safeRemoveItem('lastTheme');
+            themeStatus('主题应用失败：' + e.message + '，已保留原主题', true);
+        }
+    }
+    function resetCustomTheme() {
+        if (!window.__getThemeData() && !getThemeName()) { refreshThemeUI(); return; }
+        saveLastSnapshot(snapshotCurrentTheme());
+        restoreSiteDefaultTheme();
+        themeStatus('已恢复默认配色。', false);
+        scheduleThemeSync();
+    }
+
+    (function initThemeDialogClose() {
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const ov = document.getElementById('theme-dialog-overlay');
+            if (ov && !ov.classList.contains('overlay-hidden')) closeThemeDialog();
+        });
+    })();
 
     function scrollToTop() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2421,6 +3137,7 @@ const HTML_CONTENT = `
                  document.getElementById('password-input').value = '';
                  toggleOverlay('password-dialog-overlay', false);
                  await loadLinks();
+                 pullThemeFromKv();
                  await customAlert('登录成功');
              } else if (res.status === 429 && data.locked) {
                  await customAlertRateLimit(data.retryAfter || 900);
@@ -3045,14 +3762,111 @@ async function sendCached(body, request, cacheKey, cacheable, extraHeaders = {})
     return res;
 }
 
-let _htmlMeta = null;
-async function htmlMeta() {
-    if (_htmlMeta) return _htmlMeta;
-    const buf = await new Response(HTML_CONTENT).arrayBuffer();
+async function handleGetTheme(request, env) {
+    const theme = await getPublishedTheme(env);
+    return new Response(JSON.stringify({ ok: true, theme }), { status: 200, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } });
+}
+
+function sanitizeThemeVars(v) {
+    if (!v || typeof v !== 'object') return null;
+    const out = {};
+    let n = 0;
+    for (const k in v) {
+        if (typeof k !== 'string' || k.length > 40) continue;
+        const val = v[k];
+        if (typeof val !== 'string' || val.length === 0 || val.length > 64) continue;
+        out[k] = val;
+        if (++n > 200) break;
+    }
+    return Object.keys(out).length ? out : null;
+}
+function sanitizeThemeData(td) {
+    if (!td || typeof td !== 'object') return null;
+    const light = sanitizeThemeVars(td.light);
+    const dark = sanitizeThemeVars(td.dark);
+    if (!light && !dark) return null;
+    const res = { light: light || dark, dark: dark || light };
+    const theme = sanitizeThemeVars(td.theme);
+    if (theme) res.theme = theme;
+    if (typeof td.fonts === 'string') res.fonts = td.fonts.slice(0, 128);
+    return res;
+}
+async function handleSaveTheme(request, env) {
+    const v = await validateServerToken(request.headers.get('Authorization'), env);
+    if (!v.isValid) return new Response(JSON.stringify(v.response), { status: v.status, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
+    const body = await readJsonBody(request, 40 * 1024);
+    if (!body.ok) return new Response(JSON.stringify({ error: body.reason }), { status: body.reason === 'TOO_LARGE' ? 413 : 400, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
+    const b = body.data || {};
+
+    let themeData = null;
+    if (b.themeData != null) {
+        themeData = sanitizeThemeData(b.themeData);
+        if (!themeData) return new Response(JSON.stringify({ error: 'INVALID_THEME' }), { status: 422, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
+    }
+    const rec = {
+        themeData,
+        name: typeof b.name === 'string' ? b.name.slice(0, 80) : '',
+        kind: ['builtin', 'custom', 'ai', 'default'].indexOf(b.kind) >= 0 ? b.kind : 'custom',
+        source: typeof b.source === 'string' ? b.source.slice(0, 500) : '',
+        updatedAt: Date.now(),
+    };
+    try {
+        await env.CARD_ORDER.put(DEFAULT_USER + ':theme', JSON.stringify(rec));
+    } catch (e) {
+        return new Response(JSON.stringify({ error: 'KV_WRITE_FAILED' }), { status: 500, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
+    }
+
+    const oldRev = (_pubThemeMemo.value && _pubThemeMemo.value.updatedAt) || 0;
+    try {
+        const origin = new URL(request.url).origin;
+        await Promise.all([
+            caches.default.delete(new Request(origin + '/?tr=' + oldRev, { method: 'GET' })),
+            caches.default.delete(new Request(origin + '/', { method: 'GET' })), // 清理旧版无 rev 的 key
+        ]);
+    } catch (e) { console.warn('theme cache purge failed', e); }
+    _pubThemeMemo.expireAt = 0; // 失效 isolate 缓存，站长即时可见
+    return new Response(JSON.stringify({ ok: true, updatedAt: rec.updatedAt }), { status: 200, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json' } });
+}
+
+// —— 发布主题注入 ——
+const _pubThemeMemo = { value: null, expireAt: 0 };
+async function getPublishedTheme(env) {
+    const now = Date.now();
+    if (_pubThemeMemo.expireAt > now) return _pubThemeMemo.value;
+    let theme = null;
+    try {
+        const raw = await env.CARD_ORDER.get(DEFAULT_USER + ':theme');
+        if (raw) theme = JSON.parse(raw);
+    } catch (e) { theme = null; }
+    _pubThemeMemo.value = theme;
+    _pubThemeMemo.expireAt = now + 5000; 
+    return theme;
+}
+
+function jsonForScript(obj) {
+    return JSON.stringify(obj)
+        .replace(/</g, '\\u003C')
+        .replace(/>/g, '\\u003E')
+        .replace(/&/g, '\\u0026')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+}
+function themeToJsLiteral(theme) {
+    if (!theme) return 'null';
+    return jsonForScript({
+        data: theme.themeData || null,
+        name: theme.name || '',
+        kind: theme.kind || '',
+        source: theme.source || '',
+        updatedAt: theme.updatedAt || 0,
+    });
+}
+async function buildHtml(theme) {
+    const body = HTML_CONTENT.split('"__NAV_PUBLISHED_THEME__"').join(themeToJsLiteral(theme));
+    const buf = await new Response(body).arrayBuffer();
     const digest = await crypto.subtle.digest('SHA-256', buf);
     const etag = '"' + base64UrlEncodeUint8(new Uint8Array(digest)).slice(0, 32) + '"';
-    _htmlMeta = { etag, body: HTML_CONTENT };
-    return _htmlMeta;
+    return { etag, body };
 }
 
 function normalizeCategories(categories) {
@@ -3222,6 +4036,57 @@ async function safeFetchIcon(target, ms = 3500, allowSvg = false) {
         return null;
     } finally {
         clearTimeout(timer);
+    }
+}
+
+async function handleThemeProxy(request, ctx) {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+
+    if (!id) return new Response(JSON.stringify({ error: 'Missing id' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+
+    const targetUrl = 'https://tweakcn.com/r/themes/' + encodeURIComponent(id);
+
+    const cacheKey = new Request(url.toString(), request);
+    const cache = caches.default;
+    let response = await cache.match(cacheKey);
+
+    if (response) {
+        response = new Response(response.body, response);
+        response.headers.set('X-Theme-Cache-Status', 'HIT');
+        return response;
+    }
+
+    try {
+        const upstream = await fetch(targetUrl, {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'tweakcn-theme-proxy/1.0' },
+        });
+        if (!upstream.ok) {
+            return new Response(JSON.stringify({ error: 'upstream ' + upstream.status }), {
+                status: upstream.status,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            });
+        }
+        const body = await upstream.text();
+        response = new Response(body, {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'public, max-age=300, s-maxage=300',
+                'Access-Control-Allow-Origin': '*',
+                'X-Theme-Cache-Status': 'MISS',
+            },
+        });
+        ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(e => console.warn('theme cache put failed', e)));
+        return response;
+    } catch (e) {
+        return new Response(JSON.stringify({ error: 'failed to fetch theme: ' + e.message }), {
+            status: 502,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
     }
 }
 
@@ -3481,21 +4346,36 @@ export default {
                 return handleIconProxy(request, ctx);
             }
 
+            if (url.pathname === '/api/theme-proxy') {
+                return handleThemeProxy(request, ctx);
+            }
+
+            if (url.pathname === '/api/getTheme') {
+                return handleGetTheme(request, env);
+            }
+
+            if (url.pathname === '/api/saveTheme' && request.method === 'POST') {
+                return handleSaveTheme(request, env);
+            }
+
         if (url.pathname === '/' || url.pathname === '/index.html') {
-            const { etag, body } = await htmlMeta();
+            const theme = await getPublishedTheme(env);
+            const { etag, body } = await buildHtml(theme);
 
             if (request.headers.get('If-None-Match') === etag) {
                 return new Response(null, {
                     status: 304,
                     headers: {
                         'ETag': etag,
-                        'Cache-Control': 'public, max-age=60, s-maxage=300, must-revalidate',
+                        // no-cache：浏览器每次都带 etag 回源校验，避免旧页面被续命
+                        'Cache-Control': 'no-cache',
                     },
                 });
             }
 
             // 边缘缓存命中 → 0 回源
-            const cacheKey = new Request(url.origin + '/', { method: 'GET' });
+            const rev = (theme && theme.updatedAt) || 0;
+            const cacheKey = new Request(url.origin + '/?tr=' + rev, { method: 'GET' });
             const hit = await caches.default.match(cacheKey);
             if (hit) return hit;
 
@@ -3503,7 +4383,7 @@ export default {
                 headers: {
                     'Content-Type': 'text/html; charset=utf-8',
                     'ETag': etag,
-                    'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=600',
+                    'Cache-Control': 'no-cache',
                     'Vary': 'Accept-Encoding',
                 },
             });
