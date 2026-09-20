@@ -32,6 +32,14 @@
 
 内置库看腻了？在弹窗底部的输入框粘贴 [tweakcn](https://tweakcn.com) 社区主题的 **ID 或完整链接**（`themes/xxx`），点击「应用」即可换肤。[更多主题 ↗](https://tweakcn.com/community)
 
+### 主题 JSON 导出 / 导入
+
+弹窗底部提供「导入 / 导出主题」：
+
+*   **导出**：将当前自定义主题一键复制为 JSON 或下载文件，方便备份与分享。
+*   **导入**：粘贴 JSON 文本或选择本地 `.json` 文件即可应用；自动兼容三种格式——本站导出格式、tweakcn 的 `{name, cssVars}`、裸 `{light, dark, theme}` 配色数据。
+*   **安全与回退**：导入前会做体积上限、结构白名单与 CSS 值消毒校验，并自动保存快照，可通过「回退上一套」随时恢复。
+
 ![主题选择面板](images/theme-panel.webp)
 
 
