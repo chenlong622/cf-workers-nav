@@ -277,6 +277,60 @@ const HTML_CONTENT = `
                 const s = String(v == null ? '' : v).trim();
                 return __SAFE_CSS_VALUE.test(s) ? s : '';
             }
+            // 导入主题 JSON 消毒器
+            const __THEME_KEY = /^[a-z0-9-]{1,40}$/i;
+            function __sanitizeLayer(src, limit) {
+                const out = {};
+                let n = 0;
+                if (!src || typeof src !== 'object' || Array.isArray(src)) return { layer: out, n: 0 };
+                const keys = Object.keys(src); 
+                for (let i = 0; i < keys.length && n < limit; i++) {
+                    const k = keys[i];
+                    if (!__THEME_KEY.test(k) || !__THEME_ALLOWED.test(k)) continue;
+                    const v = src[k];
+                    if (typeof v !== 'string') continue;
+                    const sv = v.trim();
+                    if (!sv || sv.length > 160) continue;
+                    out[k] = sv;
+                    n++;
+                }
+                return { layer: out, n: n };
+            }
+            window.__sanitizeThemeData = function (raw) {
+                const empty = { data: null, validCount: 0, name: '' };
+                if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return empty;
+                // 兼容三种形态：{ data: {...} }、tweakcn 的 { name, cssVars: {...} }、裸 { light, dark, theme }
+                let src = raw;
+                if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) src = raw.data;
+                else if (raw.cssVars && typeof raw.cssVars === 'object' && !Array.isArray(raw.cssVars)) src = raw.cssVars;
+                const data = {};
+                let validCount = 0;
+                const layers = ['light', 'dark', 'theme'];
+                for (let i = 0; i < layers.length; i++) {
+                    const r = __sanitizeLayer(src[layers[i]], 64);
+                    if (r.n) data[layers[i]] = r.layer;
+                    validCount += r.n;
+                }
+                const fonts = src.fonts;
+                if (fonts && typeof fonts === 'object' && !Array.isArray(fonts)) {
+                    const sans = fonts.sans || fonts.fontSans || fonts.fontFamily;
+                    if (typeof sans === 'string' && sans.length <= 160) {
+                        data.fonts = { sans: sans };
+                        validCount++;
+                    }
+                }
+                const name = typeof raw.name === 'string'
+                    ? raw.name.split('').filter(function(ch){ var c = ch.charCodeAt(0); return c >= 32 && c !== 127; }).join('').trim().slice(0, 64)
+                    : '';
+                // 至少要有一种模式的有效色值，否则视为无效主题；仅有 theme 层时视为浅色/深色共用（与 fetchTheme 处理一致）
+                if (!validCount) return { data: null, validCount: 0, name: name };
+                if (!data.light && !data.dark) {
+                    if (!data.theme) return { data: null, validCount: 0, name: name };
+                    data.light = Object.assign({}, data.theme);
+                    data.dark = Object.assign({}, data.theme);
+                }
+                return { data: data, validCount: validCount, name: name };
+            };
             function __lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 忽略 */ } }
             function __lsDel(k) { try { localStorage.removeItem(k); } catch (e) { /* 忽略 */ } }
             function __appendFontStylesheet(link, href) {
@@ -616,7 +670,7 @@ const HTML_CONTENT = `
     </main>
 
     <!-- 模态框：添加/编辑链接 -->
-    <div id="dialog-overlay" class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+    <div id="dialog-overlay" class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
         <div id="dialog-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-md p-6 transform transition-all duration-300 border border-line dark:border-line dialog-scale-hidden">
             <h3 class="text-xl font-bold mb-5 text-base-foreground flex items-center gap-2">
                 <span class="w-1 h-6 bg-accent rounded-full"></span>
@@ -670,7 +724,7 @@ const HTML_CONTENT = `
     </div>
 
     <!-- 密码弹窗 -->
-    <div id="password-dialog-overlay" class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+    <div id="password-dialog-overlay" class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
         <div id="password-dialog-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl p-8 w-full max-w-sm border border-line dark:border-line text-center transform transition-all duration-300 dialog-scale-hidden">
             <div class="w-16 h-16 bg-soft dark:bg-soft rounded-full flex items-center justify-center mx-auto mb-4 text-accent">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
@@ -686,7 +740,7 @@ const HTML_CONTENT = `
     </div>
 
     <!-- 自定义 Alert -->
-    <div id="custom-alert-overlay" class="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+    <div id="custom-alert-overlay" class="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
         <div id="custom-alert-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl p-6 max-w-sm w-full border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
             <h3 id="custom-alert-title" class="text-lg font-bold mb-2 text-base-foreground">提示</h3>
             <p id="custom-alert-content" class="text-muted-foreground mb-6 text-sm leading-relaxed"></p>
@@ -697,7 +751,7 @@ const HTML_CONTENT = `
     </div>
 
     <!-- 自定义 Confirm -->
-    <div id="custom-confirm-overlay" class="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+    <div id="custom-confirm-overlay" class="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
         <div id="custom-confirm-box" class="bg-card rounded-[var(--radius-2xl)] shadow-2xl p-6 max-w-sm w-full border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
             <h3 class="text-lg font-bold mb-3 text-base-foreground">确认操作</h3>
             <p id="custom-confirm-message" class="text-muted-foreground mb-6 text-sm"></p>
@@ -709,7 +763,7 @@ const HTML_CONTENT = `
     </div>
 
     <!-- 分类输入弹窗 -->
-    <div id="category-dialog" class="fixed inset-0 z-[65] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
+    <div id="category-dialog" class="fixed inset-0 z-[65] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
         <div id="category-dialog-box" class="bg-card rounded-[var(--radius-2xl)] p-6 w-full max-w-sm shadow-2xl border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
             <h3 id="category-dialog-title" class="text-lg font-bold mb-4 text-base-foreground">分类名称</h3>
             <input type="text" id="category-name-input" class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line dark:border-line-input focus:ring-2 focus:ring-ring outline-none mb-6 dark:text-white transition-all" placeholder="输入分类名称">
@@ -721,10 +775,10 @@ const HTML_CONTENT = `
     </div>
 
     <!-- 主题设置弹窗 -->
-    <div id="theme-dialog-overlay" class="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden">
-        <div id="theme-dialog-box" class="bg-card dark:bg-card rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-2xl h-[90vh] max-h-[720px] flex flex-col border border-line transition-all duration-300 transform">
+    <div id="theme-dialog-overlay" class="fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
+        <div id="theme-dialog-box" class="bg-card dark:bg-card rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-2xl h-[92vh] max-h-[760px] flex flex-col border border-line transition-all duration-300 transform">
             <!-- 头部：标题 + 关闭 -->
-            <div class="p-6 pb-4 flex items-center justify-between border-b border-[color-mix(in_oklab,var(--border)_40%,transparent)] shrink-0">
+            <div class="px-5 py-3.5 flex items-center justify-between border-b border-[color-mix(in_oklab,var(--border)_40%,transparent)] shrink-0">
                 <h3 class="text-lg font-bold text-base-foreground flex items-center gap-2">
                     <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a1 1 0 0 1 1 1v.5a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm8 9a1 1 0 0 1-1 1h-.5a1 1 0 0 1 0-2H19a1 1 0 0 1 1 1zM5 12a1 1 0 0 1-1 1h-.5a1 1 0 0 1 0-2H4a1 1 0 0 1 1 1z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
                     主题皮肤
@@ -735,31 +789,91 @@ const HTML_CONTENT = `
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 pt-4">
-                <div id="theme-status-bar" class="mb-5"></div>
+            <div class="flex-1 min-h-0 flex flex-col overflow-hidden p-5 pt-3">
+                <div id="theme-status-bar" class="mb-3 shrink-0"></div>
 
-                <div class="mb-2 flex items-center justify-between">
+                <div class="mb-2 flex items-center justify-between shrink-0">
                     <h4 class="text-sm font-semibold text-base-foreground">推荐主题</h4>
                     <span id="theme-kind-toggle" class="text-xs text-muted-foreground"></span>
                 </div>
-                <p id="theme-guide" class="text-xs text-muted-foreground mb-2"></p>
-                <div id="theme-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[48vh] overflow-y-auto px-1 py-1 no-scrollbar"></div>
+                <p id="theme-guide" class="text-xs text-muted-foreground mb-2 shrink-0"></p>
+                <div id="theme-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1 min-h-0 overflow-y-auto px-1 py-1 no-scrollbar content-start"></div>
 
-                <div id="theme-custom-details" class="mt-6 border border-[color-mix(in_oklab,var(--border)_40%,transparent)] rounded-[var(--radius-xl)]">
-                    <div class="px-4 py-3 text-sm font-medium text-base-foreground">
-                        自定义主题（粘贴 tweakcn 链接 / ID）
+                <div id="theme-custom-details" class="mt-4 shrink-0 border border-[color-mix(in_oklab,var(--border)_40%,transparent)] rounded-[var(--radius-xl)]">
+                    <div class="px-4 py-2.5 text-sm font-medium text-base-foreground">
+                        tweakcn 主题
                     </div>
                     <div class="px-4 pb-4">
-                        <div class="flex gap-2 mb-2">
+                        <div class="relative mb-2">
                             <input type="text" id="theme-input" placeholder="粘贴主题ID 或完整链接 themes/xxx"
-                                class="flex-1 min-w-0 px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] outline-none transition-all text-base-foreground dark:text-white">
-                            <button onclick="applyCustomTheme()" class="shrink-0 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium text-accent-foreground bg-accent hover:bg-accent shadow-lg shadow-accent/20 transition-all hover:translate-y-[-1px]">应用</button>
+                                class="w-full min-w-0 pl-4 pr-[72px] py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] outline-none transition-all text-base-foreground dark:text-white">
+                            <button onclick="applyCustomTheme()" class="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-[var(--radius-lg)] text-sm font-medium text-accent-foreground bg-accent hover:bg-accent shadow-lg shadow-accent/20 transition-all">应用</button>
                         </div>
-                        <p id="theme-status" class="text-xs mb-2 min-h-[1rem] text-muted-foreground"></p>
+                        <p id="theme-status" class="hidden text-xs mb-2 text-muted-foreground" style="color: var(--muted-foreground);"></p>
                         <a href="https://tweakcn.com/community" target="_blank" rel="noopener" class="text-xs text-accent hover:underline inline-flex items-center gap-1">更多主题：tweakcn.com/community ↗</a>
                     </div>
                 </div>
+
+                <!-- 导入 / 导出主题（点击后弹出子弹窗） -->
+                <div id="theme-json-details" class="mt-4 shrink-0 border border-[color-mix(in_oklab,var(--border)_40%,transparent)] rounded-[var(--radius-xl)]">
+                    <div class="px-4 py-2.5 text-sm font-medium text-base-foreground">
+                        导入 / 导出主题
+                    </div>
+                    <div class="px-4 pb-4">
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            <button onclick="openThemeExportDialog()" class="flex-1 min-w-[130px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium border border-line text-base-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-all">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                                导出主题
+                            </button>
+                            <button onclick="openThemeImportDialog()" class="flex-1 min-w-[130px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium border border-line text-base-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-all">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15V3m0 0L8 7m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                                导入主题
+                            </button>
+                        </div>
+                        <p id="theme-json-entry-status" class="hidden mt-2 text-xs"></p>
+                    </div>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 子弹窗：导出主题 -->
+    <div id="theme-export-overlay" class="fixed inset-0 z-[95] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
+        <div id="theme-export-box" class="bg-card dark:bg-card rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-base-foreground">导出主题</h3>
+                <button onclick="closeThemeExportDialog()" aria-label="关闭" class="p-1.5 rounded-full text-muted-foreground hover:bg-muted dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <textarea id="theme-export-text" rows="8" readonly spellcheck="false"
+                class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line-input text-xs font-mono leading-relaxed text-base-foreground dark:text-white resize-y mb-3"></textarea>
+            <p id="theme-export-status" class="hidden text-xs mb-2"></p>
+            <div class="flex gap-2">
+                <button onclick="copyThemeJson()" class="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium border border-line text-base-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">复制 JSON</button>
+                <button onclick="downloadThemeJson()" class="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium text-accent-foreground bg-accent hover:bg-accent transition-all">下载文件</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 子弹窗：导入主题 JSON -->
+    <div id="theme-import-overlay" class="fixed inset-0 z-[95] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 overlay-hidden hidden">
+        <div id="theme-import-box" class="bg-card dark:bg-card rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl border border-line dark:border-line transform transition-all duration-300 dialog-scale-hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-base-foreground">导入主题</h3>
+                <button onclick="closeThemeImportDialog()" aria-label="关闭" class="p-1.5 rounded-full text-muted-foreground hover:bg-muted dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <textarea id="theme-import-text" rows="8" spellcheck="false" placeholder="粘贴主题 JSON 数据，或点击下方「选择文件」"
+                class="w-full px-4 py-2.5 rounded-[var(--radius-xl)] bg-muted dark:bg-muted border border-line-input focus:ring-2 focus:ring-[color-mix(in_oklab,var(--ring)_50%,transparent)] outline-none transition-all text-xs font-mono leading-relaxed text-base-foreground dark:text-white resize-y mb-1"></textarea>
+            <p class="text-xs text-muted-foreground mb-2">导入将覆盖当前主题，应用后可点「回退上一套」撤销。</p>
+            <p id="theme-import-status" class="hidden text-xs mb-2"></p>
+            <div class="flex gap-2">
+                <button onclick="pickThemeFile()" class="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium border border-line text-base-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">选择文件</button>
+                <button id="theme-import-apply-btn" onclick="applyThemeJsonFlow()" class="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-medium text-accent-foreground bg-accent hover:bg-accent transition-all">应用</button>
+            </div>
+            <input type="file" id="theme-import-file" accept=".json,application/json" class="hidden">
         </div>
     </div>
 
@@ -1042,7 +1156,7 @@ const HTML_CONTENT = `
             isLoggedIn = false;
             isEditMode = false;
         }
-        await loadLinks();
+        await loadLinks(true);
         pullThemeFromKv();
     }
 
@@ -1216,20 +1330,14 @@ const HTML_CONTENT = `
         return Object.values(categories).map(category => category.links || []).flat();
     }
     
-    async function loadLinks() {
-        if (isLoggedIn) {
+    async function loadLinks(alreadyValidated = false) {
+        if (isLoggedIn && !alreadyValidated) {
             const isValid = await validateToken();
             if (!isValid) {
                 logout();
                 return;
             }
         }
-        const headers = { 'Content-Type': 'application/json' };
-        if (isLoggedIn) {
-            const token = localStorage.getItem('authToken');
-            if (token) headers['Authorization'] = token;
-        }
-        
         try {
             const response = await fetchWithAuth('/api/getLinks');
             if (!response.ok) throw new Error("HTTP error! status: " + response.status);
@@ -1420,7 +1528,7 @@ const HTML_CONTENT = `
 
             // 标题区域
             const titleContainer = document.createElement('div');
-            titleContainer.className = 'flex items-center gap-3 mb-5 pb-2 border-b border-[color-mix(in_oklab,var(--border)_60%,transparent)]';
+            titleContainer.className = 'flex items-center gap-3 mb-5 pb-2 border-b border-[color-mix(in_oklab,var(--muted),var(--border))] dark:border-[color-mix(in_oklab,var(--muted)_70%,var(--border))]';
             
             const title = document.createElement('h2');
             title.className = 'text-lg font-bold text-base-foreground flex items-center gap-2';
@@ -1719,6 +1827,18 @@ const HTML_CONTENT = `
     }
 
     // --- 遮罩层过渡辅助函数 ---
+    // 滚动锁引用计数：弹窗可能互相嵌套（如登录后弹 alert），只有最后一个关闭时才释放页面滚动
+    let overlayScrollCount = 0;
+    function lockPageScroll() {
+        const locked = overlayScrollCount > 0;
+        overlayScrollCount++;
+        if (!locked) document.body.style.overflow = 'hidden';
+    }
+    function unlockPageScroll() {
+        overlayScrollCount = Math.max(0, overlayScrollCount - 1);
+        if (overlayScrollCount === 0) document.body.style.overflow = '';
+    }
+
     function toggleOverlay(id, show) {
         const overlay = document.getElementById(id);
         const box = overlay.querySelector('div[id$="-box"]'); 
@@ -1733,6 +1853,8 @@ const HTML_CONTENT = `
                 box.classList.remove('dialog-scale-hidden');
                 box.classList.add('dialog-scale-visible');
             }
+            // 锁定主页滚动，避免滚轮穿透到主页面
+            lockPageScroll();
         } else {
             overlay.classList.remove('overlay-visible');
             overlay.classList.add('overlay-hidden');
@@ -1741,6 +1863,8 @@ const HTML_CONTENT = `
                 box.classList.remove('dialog-scale-visible');
                 box.classList.add('dialog-scale-hidden');
             }
+            // 释放主页滚动
+            unlockPageScroll();
             
             setTimeout(() => {
                 if(overlay.classList.contains('overlay-hidden')) {
@@ -2607,7 +2731,7 @@ const HTML_CONTENT = `
     // 内置推荐主题库：preview 色值仅用于卡片渲染（零网络），应用时经 fetchTheme 拉取全量 cssVars
     const BUILTIN_THEMES = [
         { id: 'default', name: '默认配色', tags: ['清爽绿'], preview: { light: { background: '#ffffff', foreground: '#334155', primary: '#16a34a', secondary: '#f1f5f9', accent: '#4ade80' }, dark: { background: '#0f172a', foreground: '#e2e8f0', primary: '#4ade80', secondary: '#1e293b', accent: '#22c55e' } }, builtin: true },
-        { id: 'claude', name: 'Claude', tags: ['暖色', 'Anthropic'], preview: { light: { background: '#faf9f5', foreground: '#4a4540', primary: '#d97757', secondary: '#ece9e2', accent: '#e9e5dc' }, dark: { background: '#262624', foreground: '#d4cfc4', primary: '#cd6e4e', secondary: '#3d3c38', accent: '#33322e' } } },
+        { id: 'claude', name: 'Claude', tags: ['暖色'], preview: { light: { background: '#faf9f5', foreground: '#4a4540', primary: '#d97757', secondary: '#ece9e2', accent: '#e9e5dc' }, dark: { background: '#262624', foreground: '#d4cfc4', primary: '#cd6e4e', secondary: '#3d3c38', accent: '#33322e' } } },
         { id: 'amethyst-haze', name: 'Amethyst Haze', tags: ['优雅紫'], preview: { light: { background: '#f5f3f8', foreground: '#4a4160', primary: '#7c5fa8', secondary: '#cbbde0', accent: '#d8a2b8' }, dark: { background: '#251f33', foreground: '#e7e2f1', primary: '#9d82c4', secondary: '#4a4160', accent: '#b0748f' } } },
         { id: 'catppuccin', name: 'Catppuccin', tags: ['柔和'], preview: { light: { background: '#eff1f5', foreground: '#4c4f69', primary: '#7287fd', secondary: '#ccd0da', accent: '#f9b8c4' }, dark: { background: '#303446', foreground: '#c6d0f5', primary: '#a6d189', secondary: '#414559', accent: '#f2d5cf' } } },
         { id: 'kodama-grove', name: 'Kodama Grove', tags: ['自然绿'], preview: { light: { background: '#f4f7f2', foreground: '#3a4a3a', primary: '#4a7c59', secondary: '#dfe8dd', accent: '#8fbf9f' }, dark: { background: '#1f2a22', foreground: '#dce8dc', primary: '#7fb98b', secondary: '#34453a', accent: '#5d8f6f' } } },
@@ -2623,6 +2747,10 @@ const HTML_CONTENT = `
     }
     function getThemeName() { return getThemeMeta('themeName', null); }
     function getThemeKind() { return getThemeMeta('themeKind', window.__getThemeData() ? 'custom' : 'default'); }
+    function isInternalThemeSource(s) {
+        if (!s) return false;
+        return s.indexOf('tweakcn:') === 0 || s.indexOf('json:') === 0 || s === 'file';
+    }
     function safeSetItem(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { console.warn('localStorage 写入失败:', k, e); return false; } }
     function safeRemoveItem(k) { try { localStorage.removeItem(k); } catch (e) { console.warn('localStorage 移除失败:', k, e); } }
 
@@ -2676,14 +2804,14 @@ const HTML_CONTENT = `
             swatches = [p.primary, p.secondary, p.accent];
         }
         bar.innerHTML =
-            '<div class="flex items-center justify-between gap-3 py-3 px-4 rounded-[var(--radius-xl)] bg-muted dark:bg-muted">' +
+            '<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 px-4 rounded-[var(--radius-xl)] bg-muted dark:bg-muted">' +
               '<div class="flex items-center gap-2 min-w-0">' +
                 '<span class="shrink-0 flex gap-1">' +
                   swatches.map(c => '<span class="inline-block w-3.5 h-3.5 rounded-full border" style="background:' + esc(c) + ';border-color:rgba(128,128,128,0.35)"></span>').join('') +
                 '</span>' +
                 '<span class="truncate text-sm font-medium text-base-foreground">' + esc('当前：' + label) + '</span>' +
               '</div>' +
-              '<span class="flex items-center gap-2 shrink-0">' +
+              '<span class="flex items-center gap-2 shrink-0 basis-full md:basis-auto max-w-full">' +
                 (isLoggedIn && _themePushFailed ? '<button onclick="retryThemePush()" title="主题推送到云端失败，点击立即重试" class="px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-secondary transition-colors shrink-0">未同步 · 重试</button>' : '') +
                 (lastSnapshotExists() ? '<button onclick="restoreLastTheme()" class="px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium text-muted-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">回退上一套</button>' : '') +
                 '<button onclick="resetCustomTheme()" class="px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium text-muted-foreground hover:bg-secondary dark:hover:bg-[color-mix(in_oklab,var(--muted)_40%,transparent)] transition-colors">恢复默认</button>' +
@@ -2704,18 +2832,20 @@ const HTML_CONTENT = `
         const isActive = (t.id === 'default') ? !data : (kind === 'builtin' && getThemeName() === t.name);
         const borderColor = isActive ? p.primary : 'rgba(128,128,128,0.25)';
         return '<button type="button" data-theme-id="' + esc(t.id) + '" data-theme-name="' + esc(t.name) + '" ' +
-            'class="theme-card w-full text-left rounded-2xl px-3 py-3 border transition-all duration-150 hover:translate-y-[-2px] hover:shadow-lg ' + (isActive ? 'theme-card-active' : '') + '" ' +
+            'class="theme-card w-full text-left rounded-2xl px-3 py-2.5 border transition-all duration-150 hover:translate-y-[-2px] hover:shadow-lg ' + (isActive ? 'theme-card-active' : '') + '" ' +
             'style="background:' + esc(p.background) + ';border-color:' + esc(borderColor) + ';color:' + esc(p.foreground) + (isActive ? ';--ring-color:' + esc(p.primary) : '') + '">' +
-            '<div class="flex items-center justify-between mb-2">' +
-              '<div class="flex gap-1">' +
+            '<div class="flex items-center justify-between gap-2 mb-2">' +
+              '<div class="flex gap-1 shrink-0">' +
                 '<span class="inline-block w-3 h-3 rounded-sm border" style="background:' + esc(p.primary) + ';border-color:rgba(128,128,128,0.35)"></span>' +
                 '<span class="inline-block w-3 h-3 rounded-sm border" style="background:' + esc(p.secondary) + ';border-color:rgba(128,128,128,0.35)"></span>' +
                 '<span class="inline-block w-3 h-3 rounded-sm border" style="background:' + esc(p.accent) + ';border-color:rgba(128,128,128,0.35)"></span>' +
               '</div>' +
-              (isActive ? '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style="background:' + esc(p.primary) + ';color:' + esc(p.background) + '">使用中</span>' : '') +
+              '<span class="text-[10px] opacity-70 truncate">' + esc(t.tags.join(' · ')) + '</span>' +
             '</div>' +
-            '<div class="text-sm font-semibold truncate">' + esc(t.name) + '</div>' +
-            '<div class="text-[10px] opacity-70 truncate">' + esc(t.tags.join(' · ')) + '</div>' +
+            '<div class="flex items-center justify-between gap-2">' +
+              '<div class="text-sm font-semibold truncate min-w-0">' + esc(t.name) + '</div>' +
+              (isActive ? '<span class="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full" style="background:' + esc(p.primary) + ';color:' + esc(p.background) + '">使用中</span>' : '') +
+            '</div>' +
             '</button>';
     }
 
@@ -2891,7 +3021,8 @@ const HTML_CONTENT = `
             scheduleThemeSync();
         }
         const input = document.getElementById('theme-input');
-        if (input) input.value = getThemeMeta('themeSource', '');
+        const src = getThemeMeta('themeSource', '');
+        if (input) input.value = isInternalThemeSource(src) ? '' : src;
     }
 
     // —— 主题缓存 ——
@@ -2941,16 +3072,21 @@ const HTML_CONTENT = `
 
     function themeStatus(msg, isError) {
         const el = document.getElementById('theme-status');
-        if (el) { el.textContent = msg; el.style.color = isError ? '#ef4444' : 'var(--muted-foreground)'; }
+        if (!el) return;
+        if (!msg) { el.textContent = ''; el.classList.add('hidden'); return; }
+        el.textContent = msg;
+        el.style.color = isError ? '#ef4444' : 'var(--muted-foreground)';
+        el.classList.remove('hidden');
     }
     function openThemeDialog() {
         const input = document.getElementById('theme-input');
         const saved = getThemeMeta('themeSource', '');
-        if (input) input.value = saved;
+        if (input) input.value = isInternalThemeSource(saved) ? '' : saved;
         const overlay = document.getElementById('theme-dialog-overlay');
         if (overlay) { overlay.classList.remove('hidden'); void overlay.offsetWidth; overlay.classList.remove('overlay-hidden'); overlay.classList.add('overlay-visible'); }
         const box = document.getElementById('theme-dialog-box');
         if (box) { box.classList.remove('dialog-scale-hidden'); box.classList.add('dialog-scale-visible'); }
+        lockPageScroll();
         refreshThemeUI();
         themeStatus('', false);
     }
@@ -2959,8 +3095,195 @@ const HTML_CONTENT = `
         if (overlay) { overlay.classList.remove('overlay-visible'); overlay.classList.add('overlay-hidden'); }
         const box = document.getElementById('theme-dialog-box');
         if (box) { box.classList.remove('dialog-scale-visible'); box.classList.add('dialog-scale-hidden'); }
+        unlockPageScroll();
         setTimeout(() => { if (overlay && overlay.classList.contains('overlay-hidden')) overlay.classList.add('hidden'); }, 300);
     }
+
+    // —— 自定义主题 JSON 导出 / 导入 ——
+    const THEME_JSON_MAX = 256 * 1024; // 导入内容体积上限（文本与文件同标准）
+
+    function setThemeJsonStatus(elId, msg, isError) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        if (!msg) { el.classList.add('hidden'); return; }
+        el.textContent = msg;
+        el.style.color = isError ? '#ef4444' : 'var(--muted-foreground)';
+        el.classList.remove('hidden');
+    }
+
+    function buildThemeExportJson() {
+        const data = window.__getThemeData();
+        if (!data) return null;
+        const kind = getThemeKind();
+        return JSON.stringify({
+            type: 'cfile-theme',
+            version: 1,
+            name: getThemeName() || '自定义主题',
+            kind: kind === 'builtin' ? 'builtin' : 'custom',
+            data: data,
+            exportedAt: Date.now()
+        }, null, 2);
+    }
+
+    function openThemeExportDialog() {
+        let json = null;
+        try { json = buildThemeExportJson(); } catch (e) { /* 数据损坏按无主题处理 */ }
+        if (!json) { setThemeJsonStatus('theme-json-entry-status', '当前是默认主题，暂无可导出的自定义主题', true); return; }
+        setThemeJsonStatus('theme-json-entry-status', '', false);
+        document.getElementById('theme-export-text').value = json;
+        setThemeJsonStatus('theme-export-status', '', false);
+        toggleOverlay('theme-export-overlay', true);
+    }
+    function closeThemeExportDialog() { toggleOverlay('theme-export-overlay', false); }
+
+    function copyThemeJson() {
+        const ta = document.getElementById('theme-export-text');
+        const done = () => setThemeJsonStatus('theme-export-status', '已复制到剪贴板。', false);
+        const fallback = () => {
+            try { ta.removeAttribute('readonly'); ta.select(); document.execCommand('copy'); ta.setAttribute('readonly', ''); } catch (e) { /* 忽略 */ }
+            setThemeJsonStatus('theme-export-status', '剪贴板不可用，已选中文本，可按 Ctrl/Cmd+C 手动复制。', true);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(ta.value).then(done, fallback);
+        } else { fallback(); }
+    }
+
+    function downloadThemeJson() {
+        const ta = document.getElementById('theme-export-text');
+        if (!ta.value) { setThemeJsonStatus('theme-export-status', '没有可下载的内容', true); return; }
+        try {
+            let name = 'theme';
+            try { name = (JSON.parse(ta.value).name || 'theme'); } catch (e) { /* 用默认名 */ }
+            // 文件名清洗：去控制字符与非法文件名字符
+            const _nm = String(name), _bad = [47, 92, 58, 42, 63, 34, 60, 62, 124];
+            let _out = '';
+            for (let _i = 0; _i < _nm.length; _i++) {
+                const _c = _nm.charCodeAt(_i);
+                if (_c < 32 || _c === 127 || _bad.indexOf(_c) >= 0) continue;
+                _out += _nm[_i];
+            }
+            const safeName = _out.slice(0, 40) || 'theme';
+            const blob = new Blob([ta.value], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = safeName + '_' + new Date().toISOString().split('T')[0] + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            setThemeJsonStatus('theme-export-status', '已下载：' + a.download, false);
+        } catch (e) {
+            setThemeJsonStatus('theme-export-status', '导出失败', true);
+        }
+    }
+
+    // 导入子弹窗：两步确认状态机（0=待校验 1=等待覆盖确认）
+    let _themeImportStage = 0;
+    let _themeImportReady = null;
+
+    function resetThemeImportStage() {
+        _themeImportStage = 0;
+        _themeImportReady = null;
+        const btn = document.getElementById('theme-import-apply-btn');
+        if (btn) {
+            btn.textContent = '应用';
+            btn.classList.remove('!text-red-600', 'dark:!text-red-400', '!bg-red-500/10');
+        }
+    }
+
+    function openThemeImportDialog() {
+        resetThemeImportStage();
+        setThemeJsonStatus('theme-import-status', '', false);
+        setThemeJsonStatus('theme-json-entry-status', '', false);
+        toggleOverlay('theme-import-overlay', true);
+    }
+    function closeThemeImportDialog() {
+        resetThemeImportStage();
+        toggleOverlay('theme-import-overlay', false);
+    }
+
+    function pickThemeFile() {
+        const fi = document.getElementById('theme-import-file');
+        if (!fi) return;
+        fi.value = '';
+        fi.onchange = (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            if (file.size > THEME_JSON_MAX) {
+                setThemeJsonStatus('theme-import-status', '文件过大（上限 256KB），请检查文件', true);
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    document.getElementById('theme-import-text').value = String(ev.target.result || '');
+                    resetThemeImportStage();
+                    setThemeJsonStatus('theme-import-status', '文件已读取，请点击「应用」完成导入。', false);
+                } catch (err) {
+                    setThemeJsonStatus('theme-import-status', '文件读取异常', true);
+                }
+            };
+            reader.onerror = () => setThemeJsonStatus('theme-import-status', '文件读取失败，请重试', true);
+            reader.readAsText(file);
+        };
+        fi.click();
+    }
+
+    function applyThemeJsonFlow() {
+        const btn = document.getElementById('theme-import-apply-btn');
+        if (_themeImportStage === 1 && _themeImportReady) {
+            const ready = _themeImportReady;
+            resetThemeImportStage();
+            try {
+                saveLastSnapshot(snapshotCurrentTheme());
+                applyThemeData({ data: ready.data, name: ready.name || '导入主题', kind: 'custom', source: 'json:' + (ready.name || 'import') });
+                closeThemeImportDialog();
+                setThemeJsonStatus('theme-json-entry-status', '主题导入成功（已保存，可点「回退上一套」撤销）。', false);
+            } catch (e) {
+                setThemeJsonStatus('theme-import-status', '应用主题失败：' + e.message, true);
+            }
+            return;
+        }
+        const text = (document.getElementById('theme-import-text').value || '').trim();
+        if (!text) { setThemeJsonStatus('theme-import-status', '请先粘贴 JSON 或选择文件', true); return; }
+        if (text.length > THEME_JSON_MAX) { setThemeJsonStatus('theme-import-status', '内容过大（上限 256KB）', true); return; }
+        let parsed;
+        try {
+            parsed = JSON.parse(text);
+        } catch (e) {
+            setThemeJsonStatus('theme-import-status', 'JSON 格式无效，请检查内容', true);
+            return;
+        }
+        let result;
+        try {
+            result = window.__sanitizeThemeData(parsed);
+        } catch (e) {
+            setThemeJsonStatus('theme-import-status', '主题数据校验失败', true);
+            return;
+        }
+        if (!result || !result.data) {
+            setThemeJsonStatus('theme-import-status', '文件中没有有效的主题变量（需包含 light 或 dark 色值）', true);
+            return;
+        }
+        _themeImportReady = result;
+        _themeImportStage = 1;
+        if (btn) {
+            btn.textContent = '确认覆盖导入';
+            btn.classList.add('!text-red-600', 'dark:!text-red-400', '!bg-red-500/10');
+        }
+        setThemeJsonStatus('theme-import-status', '校验通过（共 ' + result.validCount + ' 个变量）。再次点击将覆盖当前主题。', false);
+    }
+
+    (function bindThemeImportReset() {
+        const ta = document.getElementById('theme-import-text');
+        if (ta) ta.addEventListener('input', () => {
+            if (_themeImportStage === 1) {
+                resetThemeImportStage();
+                setThemeJsonStatus('theme-import-status', '', false);
+            }
+        });
+    })();
     function extractThemeId(url) {
         const s = String(url || '').trim();
         if (!s) return null;
@@ -3033,6 +3356,11 @@ const HTML_CONTENT = `
     (function initThemeDialogClose() {
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
+            // 先关最上层子弹窗，没有子弹窗时才关主题弹窗
+            const exportOv = document.getElementById('theme-export-overlay');
+            if (exportOv && !exportOv.classList.contains('hidden')) { closeThemeExportDialog(); return; }
+            const importOv = document.getElementById('theme-import-overlay');
+            if (importOv && !importOv.classList.contains('hidden')) { closeThemeImportDialog(); return; }
             const ov = document.getElementById('theme-dialog-overlay');
             if (ov && !ov.classList.contains('overlay-hidden')) closeThemeDialog();
         });
@@ -4648,6 +4976,8 @@ export default {
         }
 
         if (url.pathname === '/api/logout' && request.method === 'POST') {
+            const validation = await validateServerToken(request.headers.get('Authorization'), env);
+            if (!validation.isValid) return new Response(JSON.stringify(validation.response), { status: validation.status, headers: { ...corsHeaders(request, env), 'Content-Type': 'application/json'} });
             await bumpKeyGen(env);
             const response = new Response(JSON.stringify({ success: true }), {
                 status: 200,
