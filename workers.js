@@ -161,6 +161,19 @@ const HTML_CONTENT = `
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* 分类标签拖拽排序 */
+        .category-button[draggable="true"] { cursor: grab; }
+        .category-button[draggable="true"]:active { cursor: grabbing; }
+        .category-button.dragging {
+            opacity: 0.45;
+            border-style: dashed;
+            border-color: var(--accent);
+        }
+        .category-button.drag-over {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 45%, transparent);
+        }
+
         .dropdown-enter {
             animation: dropdown-in 0.2s ease-out forwards;
         }
@@ -1677,7 +1690,10 @@ const HTML_CONTENT = `
             
             btn.textContent = cat;
             btn.dataset.target = cat;
+            // 仅编辑模式开启拖拽排序
+            if (isEditMode) btn.setAttribute('draggable', 'true');
             btn.onclick = () => {
+                if (categoryDragSuppressClick) { categoryDragSuppressClick = false; return; }
                 scrollToCategory(cat);
             };
             container.appendChild(btn);
@@ -1686,6 +1702,86 @@ const HTML_CONTENT = `
         if (!isTouchDevice()) {
             setupDragScroll(container);
         }
+        setupCategoryDragSort(container);
+    }
+
+    // 分类标签拖拽排序：_catDragSort 防止重复绑定
+    let categoryDragSuppressClick = false;
+    function setupCategoryDragSort(container) {
+        if (!container || container._catDragSort) return;
+        container._catDragSort = true;
+
+        let draggedButton = null;
+
+        container.addEventListener('dragstart', (e) => {
+            const btn = e.target.closest('.category-button');
+            if (!btn || !isEditMode) { e.preventDefault(); return; }
+            draggedButton = btn;
+            btn.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            // Firefox 要求 setData 才会启动拖拽
+            try { e.dataTransfer.setData('text/plain', btn.dataset.target || ''); } catch (_) {}
+        });
+
+        container.addEventListener('dragover', (e) => {
+            if (!isEditMode || !draggedButton) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const target = e.target.closest('.category-button');
+            container.querySelectorAll('.category-button.drag-over').forEach(el => {
+                if (el !== target) el.classList.remove('drag-over');
+            });
+            if (!target || target === draggedButton) return;
+            target.classList.add('drag-over');
+            // 按鼠标 X 与目标中线比较，实时预览插入位置
+            const rect = target.getBoundingClientRect();
+            if (e.clientX < rect.left + rect.width / 2) {
+                container.insertBefore(draggedButton, target);
+            } else {
+                container.insertBefore(draggedButton, target.nextSibling);
+            }
+        });
+
+        container.addEventListener('drop', async (e) => {
+            if (!isEditMode) return;
+            e.preventDefault();
+            if (!draggedButton) return;
+            draggedButton = null;
+            // 抑制拖拽后可能误触的分类跳转（部分浏览器 drop 后仍派发 click），超时自动复位
+            categoryDragSuppressClick = true;
+            setTimeout(() => { categoryDragSuppressClick = false; }, 150);
+            await commitCategoryOrder(container);
+        });
+
+        container.addEventListener('dragend', () => {
+            container.querySelectorAll('.category-button').forEach(el => {
+                el.classList.remove('dragging', 'drag-over');
+            });
+            draggedButton = null;
+        });
+    }
+
+    // 以顶栏 DOM 顺序为准回写 categories 键序并保存
+    async function commitCategoryOrder(container) {
+        const domOrder = [...container.querySelectorAll('.category-button')].map(b => b.dataset.target);
+        const allKeys = Object.keys(categories);
+        // 顶栏只渲染"可见分类"，若与全量键数不一致（存在被过滤的分类），
+        // 无法安全映射完整顺序，放弃本次拖拽并恢复渲染
+        if (domOrder.length !== allKeys.length) {
+            renderCategoryButtons();
+            return;
+        }
+        const same = domOrder.every((k, i) => k === allKeys[i]);
+        if (same) return;
+
+        const newCategories = {};
+        domOrder.forEach(key => { newCategories[key] = categories[key]; });
+        Object.keys(categories).forEach(k => delete categories[k]);
+        Object.assign(categories, newCategories);
+
+        renderCategories();
+        renderCategoryButtons();
+        await saveLinks();
     }
 
     function isTouchDevice() {
@@ -1727,6 +1823,8 @@ const HTML_CONTENT = `
 
         container.addEventListener('pointerdown', (e) => {
             if (e.button !== 0) return;
+            // 编辑模式下按住分类标签用于拖拽排序，不触发拖动滚动
+            if (isEditMode && e.target.closest('.category-button')) return;
             stopInertia();
             isDown = true;
             moved = false;
@@ -3381,16 +3479,18 @@ const HTML_CONTENT = `
         if (!isEditMode) {
              isEditMode = true;
              updateUIState();
-             
-             renderCategories(); 
-             
+
+             renderCategories();
+             renderCategoryButtons();
+
              // 提示用户
-             // logAction('进入编辑模式', {}); 
+             // logAction('进入编辑模式', {});
         } else {
              // 退出编辑模式
              isEditMode = false;
              updateUIState();
              renderCategories();
+             renderCategoryButtons();
         }
     }
     
